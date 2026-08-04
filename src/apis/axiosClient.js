@@ -1,8 +1,8 @@
 import axios from 'axios'
 import queryString from 'query-string'
 
-const baseURL = 'http://localhost:3001'
-//const baseURL = 'https://doan-server-9zrj.onrender.com'
+const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+// const baseURL = 'https://api.truenet.vn'
 
 const axiosClient = axios.create({
     baseURL: baseURL,
@@ -14,17 +14,18 @@ axiosClient.interceptors.request.use(async (config) => {
         Accept: 'application/json',
         ...config.headers
     }
-    return {...config, data: config.data ?? null}
+    return { ...config, data: config.data ?? null }
 })
 
 axiosClient.interceptors.response.use((res) => {
-    if(res.data && res.status >= 200 && res.status < 300){
+    if (res.data && res.status >= 200 && res.status < 300) {
         return res.data
-    }else {
+    } else {
         return Promise.reject(res.data);
     }
 }, (error) => {
-    const {response} = error
+    const { response } = error
+    console.error("🔴 Lỗi Axios API Call:", error.response?.data || error.message);
     return Promise.reject(response?.data || error)
 })
 
