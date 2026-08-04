@@ -10,8 +10,21 @@ const axiosClient = axios.create({
 })
 
 axiosClient.interceptors.request.use(async (config) => {
+    let token = null;
+    if (typeof window !== 'undefined') {
+        try {
+            const userObj = JSON.parse(localStorage.getItem('user'));
+            if (userObj && userObj.token) {
+                token = userObj.token;
+            }
+        } catch (e) {
+            console.error("Lỗi parse user từ localStorage:", e);
+        }
+    }
+    
     config.headers = {
         Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...config.headers
     }
     return { ...config, data: config.data ?? null }
@@ -25,8 +38,9 @@ axiosClient.interceptors.response.use((res) => {
     }
 }, (error) => {
     const { response } = error
-    console.error("🔴 Lỗi Axios API Call:", error.response?.data || error.message);
-    return Promise.reject(response?.data || error)
+    const errMessage = response?.data?.message || error.message || 'Đã có lỗi xảy ra';
+    console.error("🔴 Lỗi Axios API Call:", errMessage);
+    return Promise.reject(errMessage);
 })
 
 export default axiosClient

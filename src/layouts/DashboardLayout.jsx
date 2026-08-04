@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, theme } from 'antd';
 import { FaHome, FaFacebook, FaRobot, FaUsers, FaSms } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useSelector } from 'react-redux';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
@@ -12,10 +13,20 @@ const DashboardLayout = ({ children, title = 'Dashboard' }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  
+  const { token } = useSelector((state) => state.auth);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    // Nếu app đã mount xong mà không có token (chưa đăng nhập), đá về trang login
+    if (mounted && !token) {
+      router.push('/login');
+    }
+  }, [mounted, token, router]);
+
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -43,7 +54,8 @@ const DashboardLayout = ({ children, title = 'Dashboard' }) => {
     },
   ];
 
-  if (!mounted) {
+  if (!mounted || !token) {
+    // Trả về màn hình trắng trong lúc chờ chuyển hướng để không bị giật UI (Flash of content)
     return <div style={{ minHeight: '100vh', background: '#f5f5f5' }} />;
   }
 

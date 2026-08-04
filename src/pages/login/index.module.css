@@ -1,0 +1,58 @@
+.mobyContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #116f5d, #084c3e);
+  padding: 20px;
+}
+
+.mobyCard {
+  background: #ffffff;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.mobyBrand {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.mobyBrandText {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0d6e57;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.mobyLogo {
+  max-height: 40px;
+  object-fit: contain;
+}
+
+.mobyHeader {
+  margin-bottom: 16px;
+}
+
+.mobyForgotWrapper {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.mobyForgotLink {
+  color: #0d6e57;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.mobyForgotLink:hover {
+  color: #0a5644;
+  text-decoration: underline;
+}
