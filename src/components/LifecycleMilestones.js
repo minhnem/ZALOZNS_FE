@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Space, Popconfirm, Card, Typography } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import zaloZnsApi from '../../apis/zaloZnsApi';
-import DashboardLayout from '../../layouts/DashboardLayout';
+import zaloZnsApi from '../apis/zaloZnsApi'; // adjust path
 
 const { Title } = Typography;
 const { Option } = Select;
 
-const ZnsConfigPage = () => {
+const LifecycleMilestones = () => {
   const [config, setConfig] = useState(null);
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -141,7 +140,7 @@ const ZnsConfigPage = () => {
   ];
 
   return (
-    <DashboardLayout title="Cấu hình ZNS">
+    <>
       <Card bordered={false} className="shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <Title level={4} style={{ margin: 0 }}>Quản lý Kịch bản Zalo ZNS</Title>
@@ -236,8 +235,8 @@ const ZnsConfigPage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 };
 
-export default ZnsConfigPage;
+export default LifecycleMilestones;

@@ -1,31 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, theme } from 'antd';
-import { FaHome, FaFacebook, FaRobot, FaUsers, FaSms } from 'react-icons/fa';
+import { Layout, Menu, Avatar, Dropdown, theme, Typography } from 'antd';
+import { 
+  FaChartPie, 
+  FaUsers, 
+  FaBullhorn, 
+  FaBolt, 
+  FaChartBar, 
+  FaCog,
+  FaChevronDown,
+  FaSignOutAlt,
+  FaDatabase,
+  FaFileAlt,
+  FaBox
+} from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../features/auth/authSlice';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 const { Sider, Content } = Layout;
+const { Text } = Typography;
 
-const DashboardLayout = ({ children, title = 'Dashboard' }) => {
+const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const dispatch = useDispatch();
   
-  const { token } = useSelector((state) => state.auth);
+  const { token, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    // Nếu app đã mount xong mà không có token (chưa đăng nhập), đá về trang login
     if (mounted && !token) {
       router.push('/login');
     }
   }, [mounted, token, router]);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push('/login');
+  };
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -34,57 +53,166 @@ const DashboardLayout = ({ children, title = 'Dashboard' }) => {
   const menuItems = [
     {
       key: '/dashboard',
-      icon: <FaHome />,
-      label: 'Overview',
+      icon: <FaChartPie size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Bảng điều khiển</span>,
     },
     {
       key: '/users',
-      icon: <FaUsers />,
-      label: 'Quản lý dữ liệu',
+      icon: <FaDatabase size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Quản lý dữ liệu</span>,
     },
     {
-      key: '/bot-config',
-      icon: <FaRobot />,
-      label: 'Kịch bản Bot',
+      key: '/products',
+      icon: <FaBox size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Sản phẩm & Chu kỳ</span>,
     },
     {
-      key: '/zns-config',
-      icon: <FaSms />,
-      label: 'Cấu hình ZNS',
+      key: '/customers',
+      icon: <FaUsers size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Khách hàng</span>,
+    },
+    {
+      key: 'marketing-group',
+      icon: <FaBullhorn size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Chiến dịch</span>,
+      children: [
+        {
+          key: '/marketing',
+          label: 'Danh sách chiến dịch',
+        },
+        {
+          key: '/marketing/create',
+          label: 'Tạo chiến dịch',
+        }
+      ]
+    },
+    {
+      key: '/automation',
+      icon: <FaBolt size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Tự động hóa</span>,
+    },
+    {
+      key: '/zns-templates',
+      icon: <FaFileAlt size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Template ZNS</span>,
+    },
+    {
+      key: '/reports',
+      icon: <FaChartBar size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Báo cáo</span>,
+    },
+    {
+      key: '/settings',
+      icon: <FaCog size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Cài đặt</span>,
+    },
+  ];
+
+  const profileMenuItems = [
+    {
+      key: 'profile',
+      label: 'Hồ sơ cá nhân',
+    },
+    {
+      key: 'logout',
+      icon: <FaSignOutAlt />,
+      danger: true,
+      label: 'Đăng xuất',
+      onClick: handleLogout
     },
   ];
 
   if (!mounted || !token) {
-    // Trả về màn hình trắng trong lúc chờ chuyển hướng để không bị giật UI (Flash of content)
-    return <div style={{ minHeight: '100vh', background: '#f5f5f5' }} />;
+    return <div style={{ minHeight: '100vh', background: '#f3f4f6' }} />;
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', background: '#f3f4f6' }}>
       <Head>
-        <title>{title} | AI Chatbot</title>
+        <title>{title} | Bảng điều khiển</title>
       </Head>
-      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-        <div className="h-16 flex items-center justify-center text-white text-xl font-bold m-2 bg-blue-600 rounded-md">
-          {collapsed ? 'AI' : 'Chatbot AI'}
+      <Sider 
+        theme="light"
+        width={260}
+        collapsible 
+        collapsed={collapsed} 
+        onCollapse={(value) => setCollapsed(value)}
+        style={{ 
+          overflow: 'auto',
+          height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          borderRight: '1px solid #e5e7eb',
+          boxShadow: '2px 0 8px rgba(0,0,0,0.02)',
+          zIndex: 100
+        }}
+      >
+        {/* Logo Section */}
+        <div style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', cursor: 'pointer' }} onClick={() => router.push('/dashboard')}>
+          <div style={{ width: 32, height: 32, background: '#0d6e57', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: collapsed ? 0 : 12 }}>
+            <span style={{ color: 'white', fontWeight: 800, fontSize: 16 }}>M</span>
+          </div>
+          {!collapsed && (
+            <span style={{ fontSize: 20, fontWeight: 800, color: '#0d6e57', letterSpacing: '-0.5px' }}>
+              MobyFlow
+            </span>
+          )}
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[router.pathname]}
-          items={menuItems}
-          onClick={({ key }) => router.push(key)}
-        />
+
+        {/* Profile Section */}
+        {!collapsed && (
+          <div style={{ padding: '16px 20px', marginBottom: 8 }}>
+            <Dropdown menu={{ items: profileMenuItems }} trigger={['click']} placement="bottomLeft">
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                background: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: 12,
+                cursor: 'pointer'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Avatar style={{ backgroundColor: '#111827' }} src={user?.avatar}>
+                    {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                  </Avatar>
+                  <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Admin:</Text>
+                    <Text strong style={{ fontSize: 14 }}>{user?.name || 'Người dùng'}</Text>
+                  </div>
+                </div>
+                <FaChevronDown size={12} color="#6b7280" />
+              </div>
+            </Dropdown>
+          </div>
+        )}
+
+        <div style={{ padding: '0 12px' }}>
+          <Menu
+            theme="light"
+            mode="inline"
+            selectedKeys={[router.pathname]}
+            defaultOpenKeys={menuItems.find(item => item.children?.some(child => router.pathname === child.key)) ? [menuItems.find(item => item.children?.some(child => router.pathname === child.key)).key] : []}
+            items={menuItems}
+            onClick={({ key }) => router.push(key)}
+            style={{ borderRight: 'none' }}
+          />
+        </div>
       </Sider>
-      <Layout>
+
+      <Layout style={{ background: '#f3f4f6', marginLeft: collapsed ? 80 : 260, transition: 'margin-left 0.2s' }}>
         <Header />
-        <Content style={{ margin: '16px' }}>
+        <Content style={{ margin: '24px 24px 0', overflow: 'initial' }}>
           <div
             style={{
               padding: 24,
-              minHeight: 360,
+              minHeight: 'calc(100vh - 150px)', // adjusted for header and footer
               background: colorBgContainer,
               borderRadius: borderRadiusLG,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
             }}
           >
             {children}
