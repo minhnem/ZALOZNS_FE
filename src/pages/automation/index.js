@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Card, Button, Select, Radio, Table, Badge, Tag, Input, Space, Divider, Row, Col, message } from 'antd';
+import { Typography, Card, Button, Select, Radio, Table, Badge, Tag, Input, Space, Divider, Row, Col, message, List } from 'antd';
 import {
   PauseCircleOutlined,
   PlayCircleOutlined,
@@ -19,6 +19,7 @@ export default function AutomationPage() {
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
+  const [activeCampaigns, setActiveCampaigns] = useState([]);
   const [manualCampaign, setManualCampaign] = useState('all');
   const [manualAudience, setManualAudience] = useState('all');
   const [triggerLoading, setTriggerLoading] = useState(false);
@@ -30,14 +31,25 @@ export default function AutomationPage() {
   const fetchCampaigns = async () => {
     try {
       const res = await handleAPI('/api/campaigns', null, 'get');
-      setCampaigns(res);
+      if (res) {
+        setCampaigns(res);
+        setActiveCampaigns(res.filter(c => c.status === 'active' && c.is_auto_run));
+      }
     } catch (error) {
       message.error('Lấy dữ liệu chiến dịch thất bại');
     }
   };
 
-  const scheduledCampaigns = campaigns.filter(c => c.is_auto_run);
-  const activeCampaigns = campaigns.filter(c => c.status === 'active');
+  const parseCronDisplay = (cronStr) => {
+    if (!cronStr) return "Hàng ngày lúc 09:00 AM";
+    const parts = cronStr.split(' ');
+    if (parts.length >= 2) {
+      const hour = parts[1].padStart(2, '0');
+      const min = parts[0].padStart(2, '0');
+      return `Hàng ngày lúc ${hour}:${min}`;
+    }
+    return cronStr;
+  };
 
   const handleManualTrigger = async () => {
     try {
@@ -144,16 +156,16 @@ export default function AutomationPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, background: '#f9fafb', padding: 16, borderRadius: 8, border: '1px solid #e5e7eb' }}>
                   <Row>
-                    <Col span={6}><Text type="secondary">Lịch chạy định kỳ:</Text></Col>
-                    <Col span={18}><Text strong>Hàng ngày vào lúc 09:00 AM</Text></Col>
+                    <Col span={8}><Text type="secondary">Cơ chế Lịch chạy:</Text></Col>
+                    <Col span={16}><Text strong>Đa luồng (Mỗi chiến dịch một lịch riêng)</Text></Col>
                   </Row>
                   <Row>
-                    <Col span={6}><Text type="secondary">Lần chạy gần nhất:</Text></Col>
-                    <Col span={18}><Text strong>Hôm nay, 05/08/2026 - 09:00:00</Text> <Text type="success" style={{ color: '#389e0d' }}>(Thành công: 1,250 tin)</Text></Col>
-                  </Row>
-                  <Row>
-                    <Col span={6}><Text type="secondary">Lần chạy tiếp theo:</Text></Col>
-                    <Col span={18}><Text strong>Ngày mai, 06/08/2026 - 09:00:00</Text></Col>
+                    <Col span={8}><Text type="secondary">Tổng số tiến trình đang chạy:</Text></Col>
+                    <Col span={16}>
+                      <Text strong style={{ fontSize: 18, color: '#0d6e57' }}>
+                        {activeCampaigns.length}
+                      </Text> tiến trình tự động hóa
+                    </Col>
                   </Row>
                 </div>
               </Space>
@@ -175,67 +187,9 @@ export default function AutomationPage() {
           </Row>
         </Card>
 
-        {/* 2. SCHEDULED CAMPAIGNS */}
+        {/* 2. MANUAL TRIGGER */}
         <Card
-          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. DANH SÁCH CHIẾN DỊCH ĐÃ LÊN LỊCH CHẠY (SCHEDULED)</span>}
-          style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-        >
-          {scheduledCampaigns.map((camp) => (
-            <Card
-              key={camp._id}
-              type="inner"
-              title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Text strong style={{ fontSize: 16 }}>CHIẾN DỊCH:</Text>
-                  <Text strong style={{ color: '#0d6e57', fontSize: 16 }}>{camp.name}</Text>
-                  <Tag color={camp.status === 'active' ? 'green' : 'blue'}>{camp.status === 'active' ? 'Đang chạy' : 'Đang chờ (Waiting)'}</Tag>
-                </div>
-              }
-              extra={
-                <Space>
-                  <Button 
-                    type="primary" 
-                    ghost 
-                    icon={<EditOutlined />}
-                    onClick={() => router.push(`/marketing/create?edit=${camp._id}`)}
-                  >
-                    Sửa Chiến Dịch
-                  </Button>
-                  <Button type="default" danger icon={<PauseCircleOutlined />}>
-                    Hủy Lịch Chạy
-                  </Button>
-                </Space>
-              }
-              style={{ marginBottom: 16, borderColor: '#e5e7eb' }}
-              headStyle={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '0 20px' }}
-              bodyStyle={{ padding: '20px' }}
-            >
-              <Row>
-                <Col span={6}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Thời gian bắt đầu:</Text>
-                  <Text strong style={{ fontSize: 15 }}>{camp.start_time ? new Date(camp.start_time).toLocaleString('vi-VN') : 'Ngay lập tức'}</Text>
-                </Col>
-                <Col span={6}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Thời gian kết thúc:</Text>
-                  <Text strong style={{ fontSize: 15 }}>{camp.end_time ? new Date(camp.end_time).toLocaleString('vi-VN') : 'Không giới hạn'}</Text>
-                </Col>
-                <Col span={6}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Điều kiện lọc:</Text>
-                  <Text strong style={{ fontSize: 15 }}>{camp.target_condition?.type === 'refill_date' ? 'Dự kiến hết bỉm' : 'Tất cả'}</Text>
-                </Col>
-                <Col span={6}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Lịch chạy định kỳ:</Text>
-                  <Text strong style={{ fontSize: 15 }}>{camp.recurringSchedule ? camp.recurringSchedule : <span style={{ color: '#9ca3af' }}>Hàng ngày lúc 09:00 AM</span>}</Text>
-                </Col>
-              </Row>
-            </Card>
-          ))}
-          {scheduledCampaigns.length === 0 && <Text type="secondary">Chưa có chiến dịch nào được đặt lịch chạy tự động.</Text>}
-        </Card>
-
-        {/* 3. MANUAL TRIGGER */}
-        <Card
-          title={<span style={{ color: '#d97706', fontWeight: 600 }}>3. KÍCH HOẠT CƯỠNG CHẾ THỦ CÔNG (MANUAL TRIGGER) ⚡</span>}
+          title={<span style={{ color: '#d97706', fontWeight: 600 }}>2. KÍCH HOẠT CƯỠNG CHẾ THỦ CÔNG (MANUAL TRIGGER) ⚡</span>}
           style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderColor: '#fcd34d' }}
           headStyle={{ background: '#fffbeb', borderBottomColor: '#fde68a' }}
         >
@@ -278,6 +232,77 @@ export default function AutomationPage() {
               </Button>
             </div>
           </Space>
+        </Card>
+
+        {/* 3. ALL CAMPAIGNS */}
+        <Card
+          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>3. DANH SÁCH CHIẾN DỊCH (TẤT CẢ)</span>}
+          style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+        >
+          {campaigns.length === 0 ? (
+            <Text type="secondary">Chưa có chiến dịch nào được tạo.</Text>
+          ) : (
+            <List
+              dataSource={campaigns}
+              pagination={{
+                pageSize: 5,
+                showSizeChanger: false,
+                align: 'center',
+              }}
+              renderItem={(camp) => (
+                <List.Item style={{ borderBottom: 'none', padding: 0 }}>
+                  <Card
+                    key={camp._id}
+                    type="inner"
+                    title={
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <Text strong style={{ fontSize: 16 }}>CHIẾN DỊCH:</Text>
+                        <Text strong style={{ color: '#0d6e57', fontSize: 16 }}>{camp.name}</Text>
+                        <Tag color={camp.status === 'active' ? 'green' : 'blue'}>{camp.status === 'active' ? 'Đang chạy' : 'Đang chờ (Waiting)'}</Tag>
+                      </div>
+                    }
+                    extra={
+                      <Space>
+                        <Button 
+                          type="primary" 
+                          ghost 
+                          icon={<EditOutlined />}
+                          onClick={() => router.push(`/marketing/create?edit=${camp._id}`)}
+                        >
+                          Sửa Chiến Dịch
+                        </Button>
+                        <Button type="default" danger icon={<PauseCircleOutlined />}>
+                          Hủy Lịch Chạy
+                        </Button>
+                      </Space>
+                    }
+                    style={{ marginBottom: 16, borderColor: '#e5e7eb', width: '100%' }}
+                    headStyle={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '0 20px' }}
+                    bodyStyle={{ padding: '20px' }}
+                  >
+                    <Row>
+                      <Col span={6}>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Thời gian bắt đầu:</Text>
+                        <Text strong style={{ fontSize: 15 }}>{camp.start_time ? new Date(camp.start_time).toLocaleString('vi-VN') : 'Ngay lập tức'}</Text>
+                      </Col>
+                      <Col span={6}>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Thời gian kết thúc:</Text>
+                        <Text strong style={{ fontSize: 15 }}>{camp.end_time ? new Date(camp.end_time).toLocaleString('vi-VN') : 'Không giới hạn'}</Text>
+                      </Col>
+                      <Col span={6}>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Sản phẩm / Loại:</Text>
+                        <Text strong style={{ fontSize: 15 }}>{camp.product_id?.name || camp.type}</Text>
+                      </Col>
+                      <Col span={6}>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Lịch chạy định kỳ:</Text>
+                        <Text strong style={{ fontSize: 15 }}>{camp.recurring_schedule ? parseCronDisplay(camp.recurring_schedule) : <span style={{ color: '#9ca3af' }}>Hàng ngày lúc 09:00 AM</span>}</Text>
+                      </Col>
+                    </Row>
+                  </Card>
+                </List.Item>
+              )}
+            />
+          )}
         </Card>
 
         {/* 4. LOGS */}

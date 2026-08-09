@@ -39,7 +39,7 @@ const UsersPage = () => {
 
   const handleEdit = (record) => {
     setEditingId(record._id);
-    
+
     let computedPregnancyWeeks = null;
     if (record.edd) {
       const today = new Date();
@@ -61,7 +61,7 @@ const UsersPage = () => {
       pregnancy_weeks: computedPregnancyWeeks,
       baby_dob: record.baby_dob ? dayjs(record.baby_dob) : null,
     };
-    
+
     setBabyInputType('dob');
     form.setFieldsValue(formValues);
     setIsModalVisible(true);
@@ -127,7 +127,7 @@ const UsersPage = () => {
         await handleAPI('/api/customers', payload, 'post');
         message.success('Thêm dữ liệu thành công!');
       }
-      
+
       setIsModalVisible(false);
       form.resetFields();
       setBabyInputType('dob');
@@ -215,10 +215,10 @@ const UsersPage = () => {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
-            className="text-blue-500" 
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            className="text-blue-500"
             onClick={() => handleEdit(record)}
           />
           <Popconfirm
@@ -238,7 +238,7 @@ const UsersPage = () => {
     <DashboardLayout title="Quản lý dữ liệu">
       <Card bordered={false} className="shadow-sm">
         <div className="flex justify-between items-center mb-6">
-          <Title level={4} style={{ margin: 0 }}>Quản lý dữ liệu Khách Hàng (Users)</Title>
+          <Title level={4} style={{ margin: 0 }}>Quản lý dữ liệu tiềm năng</Title>
           <Button type="primary" icon={<PlusOutlined />} onClick={showModal} size="large" className="bg-blue-600">
             Thêm dữ liệu
           </Button>

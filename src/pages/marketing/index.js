@@ -55,6 +55,17 @@ export default function MarketingPage() {
     }
   };
 
+  const parseCronDisplay = (cronStr) => {
+    if (!cronStr) return "Hàng ngày lúc 09:00 AM";
+    const parts = cronStr.split(' ');
+    if (parts.length >= 2) {
+      const hour = parts[1].padStart(2, '0');
+      const min = parts[0].padStart(2, '0');
+      return `Hàng ngày lúc ${hour}:${min}`;
+    }
+    return cronStr;
+  };
+
   const handleDelete = async (id) => {
     try {
       await handleAPI(`/api/campaigns/${id}`, null, 'delete');
@@ -124,7 +135,10 @@ export default function MarketingPage() {
         if (record.is_auto_run && record.start_time) {
           return new Date(record.start_time).toLocaleString('vi-VN');
         }
-        return record.recurring_schedule || <span style={{ color: '#9ca3af' }}>Chạy thủ công</span>;
+        if (record.is_auto_run && record.recurring_schedule) {
+          return parseCronDisplay(record.recurring_schedule);
+        }
+        return <span style={{ color: '#9ca3af' }}>Chạy thủ công</span>;
       }
     },
     {

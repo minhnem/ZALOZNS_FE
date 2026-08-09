@@ -34,6 +34,7 @@ import {
 import { FaUsers, FaBoxOpen, FaExclamationTriangle } from 'react-icons/fa';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
@@ -47,6 +48,15 @@ export default function CustomersPage() {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editForm] = Form.useForm();
   const [editingCustomerId, setEditingCustomerId] = useState(null);
+
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
+  const [isEditOrderVisible, setIsEditOrderVisible] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [editOrderForm] = Form.useForm();
 
   useEffect(() => {
     fetchCustomers();
@@ -98,6 +108,60 @@ export default function CustomersPage() {
     setIsEditModalVisible(true);
   };
 
+  const handleOpenDetails = async (record) => {
+    setSelectedCustomer(record);
+    setIsDetailsModalVisible(true);
+    fetchCustomerOrders(record._id);
+  };
+
+  const fetchCustomerOrders = async (customerId) => {
+    try {
+      setOrdersLoading(true);
+      const res = await handleAPI(`/api/orders?customer_id=${customerId}`, null, 'get');
+      setCustomerOrders(res.map(item => ({ ...item, key: item._id })));
+    } catch (error) {
+      message.error('Lỗi khi lấy danh sách đơn hàng');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    try {
+      await handleAPI(`/api/orders/${orderId}`, null, 'delete');
+      message.success('Xóa đơn hàng thành công!');
+      if (selectedCustomer) fetchCustomerOrders(selectedCustomer._id);
+      fetchCustomers();
+    } catch (error) {
+      message.error(error.message || 'Lỗi khi xóa đơn hàng');
+    }
+  };
+
+  const handleOpenEditOrder = (record) => {
+    setEditingOrderId(record._id);
+    editOrderForm.setFieldsValue({
+      purchase_date: record.purchase_date ? dayjs(record.purchase_date) : null,
+      expected_refill_date: record.expected_refill_date ? dayjs(record.expected_refill_date) : null,
+    });
+    setIsEditOrderVisible(true);
+  };
+
+  const handleEditOrder = async (values) => {
+    try {
+      const payload = {
+        purchase_date: values.purchase_date ? values.purchase_date.toISOString() : null
+      };
+      await handleAPI(`/api/orders/${editingOrderId}`, payload, 'put');
+      message.success('Cập nhật đơn hàng thành công!');
+      setIsEditOrderVisible(false);
+      editOrderForm.resetFields();
+      if (selectedCustomer) fetchCustomerOrders(selectedCustomer._id);
+      fetchCustomers();
+    } catch (error) {
+      message.error(error.message || 'Lỗi khi cập nhật đơn hàng');
+    }
+  };
+
   const handleEditCustomer = async (values) => {
     try {
       const payload = {
@@ -142,7 +206,17 @@ export default function CustomersPage() {
       key: 'products',
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {record.last_purchased_product ? (
+          {record.purchased_products && record.purchased_products.length > 0 ? (
+            record.purchased_products.map((prod, index) => (
+              <div key={index} style={{ fontSize: 13, marginBottom: 4 }}>
+                <Text strong>• {prod.product_name}</Text>
+                <br/>
+                <Text type="secondary" style={{ paddingLeft: 10 }}>
+                  Dự kiến hết: {prod.expected_refill_date ? new Date(prod.expected_refill_date).toLocaleDateString('vi-VN') : 'Không rõ'}
+                </Text>
+              </div>
+            ))
+          ) : record.last_purchased_product ? (
             <div style={{ fontSize: 13 }}>
               <Text strong>• {record.last_purchased_product}</Text>
               <br/>
@@ -161,7 +235,7 @@ export default function CustomersPage() {
       key: 'znsStatus',
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          {record.zns_enabled ? (
+          {record.zns_enabled !== false ? (
             <>
               <Tag color="green">Hoạt động</Tag>
               <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>(Tự động ZNS)</Text>
@@ -180,8 +254,8 @@ export default function CustomersPage() {
       key: 'action',
       render: (_, record) => (
         <Space direction="vertical" size="small">
-          <Button type="text" size="small" icon={<EyeOutlined />} style={{ color: '#0ea5e9' }}>Chi tiết</Button>
-          <Button type="text" size="small" icon={<EditOutlined />} style={{ color: '#d97706' }} onClick={() => handleOpenEdit(record)}>Sửa</Button>
+          <Button type="text" size="small" icon={<EyeOutlined />} style={{ color: '#0ea5e9' }} onClick={() => handleOpenDetails(record)}>Chi tiết</Button>
+          <Button type="text" size="small" icon={<EditOutlined />} style={{ color: '#d97706' }} onClick={() => handleOpenEdit(record)}>Sửa SĐT</Button>
           <Popconfirm
             title="Bạn có chắc chắn muốn xóa khách hàng này?"
             onConfirm={() => handleDeleteCustomer(record._id)}
@@ -386,26 +460,96 @@ export default function CustomersPage() {
             <Input size="large" placeholder="Nhập số điện thoại khách hàng" />
           </Form.Item>
 
-          <Form.Item 
-            label="Sản phẩm đã mua (Tuỳ chọn)" 
-            name="product_id"
-            extra="Nếu bạn chọn sản phẩm, khách hàng sẽ lập tức trở thành người mua (BUYER) và tự động tính ngày hết bỉm."
-          >
-            <Select size="large" placeholder="Chọn sản phẩm khách mua" options={products} allowClear />
+          <Form.Item style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 0, marginTop: 32 }}>
+            <Space>
+              <Button onClick={() => setIsEditModalVisible(false)}>Hủy bỏ</Button>
+              <Button type="primary" htmlType="submit" style={{ background: '#0d6e57' }}>Lưu Khách Hàng</Button>
+            </Space>
           </Form.Item>
-          
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`Chi tiết Khách hàng: ${selectedCustomer?.phone || ''}`}
+        open={isDetailsModalVisible}
+        onCancel={() => setIsDetailsModalVisible(false)}
+        footer={null}
+        width={800}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text strong>Danh sách sản phẩm đã mua & Lịch nhắc nhở (ZNS)</Text>
+        </div>
+        <Table 
+          dataSource={customerOrders} 
+          loading={ordersLoading}
+          pagination={false}
+          bordered
+          size="small"
+          columns={[
+            {
+              title: 'Sản phẩm',
+              dataIndex: ['product_id', 'name'],
+              render: (text, record) => record.product_name || text
+            },
+            {
+              title: 'Ngày mua',
+              dataIndex: 'purchase_date',
+              render: (text) => text ? new Date(text).toLocaleDateString('vi-VN') : ''
+            },
+            {
+              title: 'Dự kiến hết (Refill)',
+              dataIndex: 'expected_refill_date',
+              render: (text) => text ? <Text strong style={{ color: '#f59e0b' }}>{new Date(text).toLocaleDateString('vi-VN')}</Text> : 'Không rõ'
+            },
+            {
+              title: 'Thao tác',
+              key: 'action',
+              render: (_, record) => (
+                <Space>
+                  <Button type="text" style={{ color: '#d97706' }} icon={<EditOutlined />} onClick={() => handleOpenEditOrder(record)}>Sửa</Button>
+                  <Popconfirm
+                    title="Xóa đơn hàng này sẽ hủy lịch gửi ZNS nhắc nhở tương ứng. Bạn chắc chứ?"
+                    onConfirm={() => handleDeleteOrder(record._id)}
+                    okText="Xóa Đơn"
+                    cancelText="Hủy"
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
+                  </Popconfirm>
+                </Space>
+              )
+            }
+          ]}
+        />
+        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="primary" style={{ background: '#0d6e57' }} onClick={() => {
+              setIsDetailsModalVisible(false);
+              form.setFieldsValue({ phone: selectedCustomer?.phone });
+              setIsModalVisible(true);
+          }}>+ Thêm đơn hàng mới</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Sửa Đơn Hàng"
+        open={isEditOrderVisible}
+        onCancel={() => setIsEditOrderVisible(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={editOrderForm} layout="vertical" onFinish={handleEditOrder} style={{ marginTop: 24 }}>
           <Form.Item 
-            label="Ngày mua (Tùy chọn)" 
+            label="Ngày mua hàng" 
             name="purchase_date"
-            extra="Nếu không chọn, hệ thống sẽ lấy ngày hiện tại làm ngày mua."
+            extra="Hệ thống sẽ tự động tính lại ngày hết bỉm dựa theo chu kỳ của sản phẩm khi bạn thay đổi ngày mua."
           >
             <DatePicker style={{ width: '100%' }} size="large" format="DD/MM/YYYY" placeholder="Chọn ngày mua" />
           </Form.Item>
 
           <Form.Item style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 0, marginTop: 32 }}>
             <Space>
-              <Button onClick={() => setIsEditModalVisible(false)}>Hủy bỏ</Button>
-              <Button type="primary" htmlType="submit" style={{ background: '#0d6e57' }}>Lưu Khách Hàng</Button>
+              <Button onClick={() => setIsEditOrderVisible(false)}>Hủy bỏ</Button>
+              <Button type="primary" htmlType="submit" style={{ background: '#0d6e57' }}>Lưu Đơn Hàng</Button>
             </Space>
           </Form.Item>
         </Form>
