@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Avatar, Dropdown, theme, Typography } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import { 
   FaChartPie, 
   FaUsers, 
@@ -182,9 +183,11 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
                 cursor: 'pointer'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Avatar style={{ backgroundColor: '#111827' }} src={user?.avatar}>
-                    {(user?.fullName || user?.name) ? (user.fullName || user.name).charAt(0).toUpperCase() : 'A'}
-                  </Avatar>
+                  <Avatar 
+                    style={{ backgroundColor: '#111827' }} 
+                    src={user?.avatar || undefined}
+                    icon={<UserOutlined />}
+                  />
                   <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>Admin:</Text>
                     <Text strong style={{ fontSize: 14 }}>{user?.fullName || user?.name || 'Người dùng'}</Text>

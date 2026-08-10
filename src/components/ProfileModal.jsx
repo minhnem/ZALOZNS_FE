@@ -115,12 +115,10 @@ const ProfileModal = ({ open, onCancel }) => {
         <Spin spinning={loading}>
           <Avatar 
             size={120} 
-            src={previewImage} 
+            src={previewImage || undefined} 
             icon={<UserOutlined />}
             style={{ backgroundColor: '#111827', marginBottom: 16 }}
-          >
-            {(!previewImage && (user?.fullName || user?.name)) ? (user?.fullName || user?.name).charAt(0).toUpperCase() : ''}
-          </Avatar>
+          />
         </Spin>
 
         <Upload

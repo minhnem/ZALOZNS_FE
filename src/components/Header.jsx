@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layout, Input, Badge, Avatar, Dropdown } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import { FaSearch, FaBell } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 
@@ -64,9 +65,12 @@ const Header = () => {
         </Dropdown>
         
         <div style={{ cursor: 'pointer' }}>
-          <Avatar size={36} src={user?.avatar} style={{ backgroundColor: '#0d6e57' }}>
-            {(user?.fullName || user?.name) ? (user.fullName || user.name).charAt(0).toUpperCase() : 'A'}
-          </Avatar>
+          <Avatar 
+            size={36} 
+            src={user?.avatar || undefined} 
+            icon={<UserOutlined />}
+            style={{ backgroundColor: '#111827' }} 
+          />
         </div>
       </div>
     </AntdHeader>
