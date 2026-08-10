@@ -19,6 +19,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import ProfileModal from '../components/ProfileModal';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -26,6 +27,7 @@ const { Text } = Typography;
 const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const router = useRouter();
   const dispatch = useDispatch();
   
@@ -112,6 +114,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
     {
       key: 'profile',
       label: 'Hồ sơ cá nhân',
+      onClick: () => setIsProfileModalOpen(true)
     },
     {
       key: 'logout',
@@ -223,6 +226,10 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
         </Content>
         <Footer />
       </Layout>
+      <ProfileModal 
+        open={isProfileModalOpen} 
+        onCancel={() => setIsProfileModalOpen(false)} 
+      />
     </Layout>
   );
 };
