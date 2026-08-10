@@ -40,18 +40,18 @@ const { Title, Text } = Typography;
 // ─── Segment colors & labels ────────────────────────────────────────────────
 const SEGMENT_CONFIG = {
   PREGNANCY: { color: '#f59e0b', bg: '#fef3c7', label: 'Mang thai', tag: 'warning' },
-  NEWBORN:   { color: '#10b981', bg: '#d1fae5', label: 'Sơ sinh',   tag: 'success' },
-  INFANT:    { color: '#3b82f6', bg: '#dbeafe', label: 'Nhũ nhi',   tag: 'processing' },
-  TODDLER:   { color: '#8b5cf6', bg: '#ede9fe', label: 'Tập đi',    tag: 'purple' },
-  PRESCHOOL: { color: '#ec4899', bg: '#fce7f3', label: 'Mẫu giáo',  tag: 'magenta' },
-  UNKNOWN:   { color: '#6b7280', bg: '#f3f4f6', label: 'Chưa rõ',   tag: 'default' },
+  NEWBORN: { color: '#10b981', bg: '#d1fae5', label: 'Sơ sinh', tag: 'success' },
+  INFANT: { color: '#3b82f6', bg: '#dbeafe', label: 'Nhũ nhi', tag: 'processing' },
+  TODDLER: { color: '#8b5cf6', bg: '#ede9fe', label: 'Tập đi', tag: 'purple' },
+  PRESCHOOL: { color: '#ec4899', bg: '#fce7f3', label: 'Mẫu giáo', tag: 'magenta' },
+  UNKNOWN: { color: '#6b7280', bg: '#f3f4f6', label: 'Chưa rõ', tag: 'default' },
 };
 
 const CHART_COLORS = {
   pregnancy: '#f59e0b',
-  newborn:   '#34d399',
-  infant:    '#60a5fa',
-  toddler:   '#0d6e57',
+  newborn: '#34d399',
+  infant: '#60a5fa',
+  toddler: '#0d6e57',
   preschool: '#a78bfa',
 };
 
@@ -70,7 +70,7 @@ const BarChart = ({ data }) => {
 
   const maxVal = Math.max(...data.map(d => categories.reduce((sum, cat) => sum + (d[cat] || 0), 0)), 1);
   const chartWidth = 680;
-  const chartHeight = 240;
+  const chartHeight = 150;
   const barWidth = 36;
   const gap = (chartWidth - data.length * barWidth) / (data.length + 1);
 
@@ -109,38 +109,56 @@ const BarChart = ({ data }) => {
         {data.map((d, idx) => {
           const x = 40 + gap + idx * (barWidth + gap);
           let currentY = chartHeight + 10;
+          
+          const tooltipContent = (
+            <div style={{ padding: '4px 8px', minWidth: 160 }}>
+              <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>{d.month}</div>
+              {categories.map(cat => (
+                <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: CHART_COLORS[cat] }} />
+                    <span style={{ fontSize: 12 }}>{categoryLabels[cat]}</span>
+                  </div>
+                  <span style={{ fontWeight: 'bold', fontSize: 13 }}>{d[cat] || 0}</span>
+                </div>
+              ))}
+            </div>
+          );
 
           return (
-            <g key={idx}>
-              {categories.map(cat => {
-                const val = d[cat] || 0;
-                const height = maxVal > 0 ? (val / maxVal) * chartHeight : 0;
-                currentY -= height;
-                return (
-                  <rect
-                    key={cat}
-                    x={x}
-                    y={currentY}
-                    width={barWidth}
-                    height={height}
-                    fill={CHART_COLORS[cat]}
-                    rx="2"
-                  >
-                    <title>{`${categoryLabels[cat]}: ${val}`}</title>
-                  </rect>
-                );
-              })}
-              {/* Month label */}
-              <text
-                x={x + barWidth / 2}
-                y={chartHeight + 28}
-                textAnchor="middle"
-                fill="#6b7280"
-                fontSize="11"
-              >
-                {d.month}
-              </text>
-            </g>
+            <Tooltip key={idx} title={tooltipContent} color="#1f2937" placement="right">
+              <g style={{ cursor: 'pointer', transition: 'opacity 0.3s' }}>
+                {/* Vùng vô hình để bắt sự kiện hover tốt hơn cho cả cột */}
+                <rect x={x - gap/4} y={10} width={barWidth + gap/2} height={chartHeight} fill="transparent" />
+                
+                {categories.map(cat => {
+                  const val = d[cat] || 0;
+                  const height = maxVal > 0 ? (val / maxVal) * chartHeight : 0;
+                  currentY -= height;
+                  return (
+                    <rect
+                      key={cat}
+                      x={x}
+                      y={currentY}
+                      width={barWidth}
+                      height={height}
+                      fill={CHART_COLORS[cat]}
+                      rx="2"
+                    />
+                  );
+                })}
+                {/* Month label */}
+                <text
+                  x={x + barWidth / 2}
+                  y={chartHeight + 28}
+                  textAnchor="middle"
+                  fill="#6b7280"
+                  fontSize="11"
+                >
+                  {d.month}
+                </text>
+              </g>
+            </Tooltip>
           );
         })}
 
@@ -203,6 +221,7 @@ export default function DashboardPage() {
           { month: 'May', pregnancy: 8, newborn: 6, infant: 3, toddler: 4, preschool: 0 },
           { month: 'Jun', pregnancy: 9, newborn: 7, infant: 2, toddler: 3, preschool: 0 },
           { month: 'Jul', pregnancy: 7, newborn: 8, infant: 4, toddler: 2, preschool: 1 },
+          { month: 'Aug', pregnancy: 6, newborn: 7, infant: 4, toddler: 3, preschool: 2 },
           { month: 'Sep', pregnancy: 5, newborn: 6, infant: 5, toddler: 3, preschool: 2 },
           { month: 'Oct', pregnancy: 4, newborn: 5, infant: 6, toddler: 4, preschool: 3 },
           { month: 'Nov', pregnancy: 3, newborn: 4, infant: 7, toddler: 5, preschool: 4 },
@@ -226,7 +245,7 @@ export default function DashboardPage() {
           { type: 'info', message: 'Phân tích: 23% bé 6m chưa nhận hướng dẫn ăn dặm' }
         ]
       };
-      
+
       // Simulate API call delay
       setTimeout(() => {
         setDashboardData(fakeData);
@@ -443,7 +462,7 @@ export default function DashboardPage() {
           {/* ──── Left Column (Metrics, Chart, Table) ──── */}
           <Col xs={24} lg={18} xl={19}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              
+
               {/* Key Metrics */}
               <div>
                 <div style={{ marginBottom: 8 }}>
@@ -484,13 +503,12 @@ export default function DashboardPage() {
                 </Row>
               </div>
 
-              {/* Chart & Automations */}
+              {/* Chart */}
               <Row gutter={16}>
-                {/* Chart */}
-                <Col xs={24} lg={12}>
+                <Col span={24}>
                   <Card
                     bordered={false}
-                    style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', height: '100%', border: '1px solid #f0f0f0' }}
+                    style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0' }}
                     bodyStyle={{ padding: '16px 20px' }}
                   >
                     <div style={{ marginBottom: 4 }}>
@@ -502,29 +520,6 @@ export default function DashboardPage() {
                       Số lượng trẻ theo độ tuổi & phân khúc
                     </Text>
                     <BarChart data={dashboardData?.monthlySegmentation || []} />
-                  </Card>
-                </Col>
-
-                {/* Recent Automations */}
-                <Col xs={24} lg={12}>
-                  <Card
-                    bordered={false}
-                    style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', height: '100%', border: '1px solid #f0f0f0' }}
-                    bodyStyle={{ padding: '16px 20px' }}
-                  >
-                    <div style={{ marginBottom: 4 }}>
-                      <Text strong style={{ fontSize: 16, color: '#0d6e57' }}>
-                        Tự Động Hóa Gần Đây & Sắp Tới
-                      </Text>
-                    </div>
-                    <Table
-                      columns={automationColumns}
-                      dataSource={(dashboardData?.recentAutomations || []).map((item, idx) => ({ ...item, key: item._id || idx }))}
-                      pagination={false}
-                      size="small"
-                      style={{ marginTop: 8 }}
-                      locale={{ emptyText: 'Chưa có chiến dịch nào' }}
-                    />
                   </Card>
                 </Col>
               </Row>

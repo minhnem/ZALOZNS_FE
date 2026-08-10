@@ -150,15 +150,18 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
         }}
       >
         {/* Logo Section */}
-        <div style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', cursor: 'pointer' }} onClick={() => router.push('/dashboard')}>
-          <div style={{ width: 32, height: 32, background: '#0d6e57', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: collapsed ? 0 : 12 }}>
-            <span style={{ color: 'white', fontWeight: 800, fontSize: 16 }}>M</span>
-          </div>
-          {!collapsed && (
-            <span style={{ fontSize: 20, fontWeight: 800, color: '#0d6e57', letterSpacing: '-0.5px' }}>
-              MobyFlow
-            </span>
-          )}
+        <div style={{ height: 64, display: 'flex', alignItems: 'center', padding: collapsed ? '0 14px' : '0 24px', cursor: 'pointer', overflow: 'hidden', transition: 'padding 0.3s ease' }} onClick={() => router.push('/dashboard')}>
+          <img 
+            src="/logo mobyflow2-01.png" 
+            alt="MobyFlow Logo" 
+            style={{ 
+              height: 52, 
+              objectFit: 'contain',
+              maxWidth: collapsed ? 52 : 200,
+              transition: 'max-width 0.3s ease',
+              display: 'block'
+            }} 
+          />
         </div>
 
         {/* Profile Section */}
@@ -177,11 +180,11 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <Avatar style={{ backgroundColor: '#111827' }} src={user?.avatar}>
-                    {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                    {(user?.fullName || user?.name) ? (user.fullName || user.name).charAt(0).toUpperCase() : 'A'}
                   </Avatar>
                   <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>Admin:</Text>
-                    <Text strong style={{ fontSize: 14 }}>{user?.name || 'Người dùng'}</Text>
+                    <Text strong style={{ fontSize: 14 }}>{user?.fullName || user?.name || 'Người dùng'}</Text>
                   </div>
                 </div>
                 <FaChevronDown size={12} color="#6b7280" />

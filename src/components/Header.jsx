@@ -65,7 +65,7 @@ const Header = () => {
         
         <div style={{ cursor: 'pointer' }}>
           <Avatar size={36} src={user?.avatar} style={{ backgroundColor: '#0d6e57' }}>
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+            {(user?.fullName || user?.name) ? (user.fullName || user.name).charAt(0).toUpperCase() : 'A'}
           </Avatar>
         </div>
       </div>

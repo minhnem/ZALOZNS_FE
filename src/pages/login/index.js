@@ -8,7 +8,7 @@ import styles from './index.module.css';
 const { Title, Text } = Typography;
 
 const BRAND_NAME = "MobyFlow";
-const LOGO_URL = "";
+const LOGO_URL = "/logo mobyflow2-01.png";
 
 export default function LoginPage() {
   const [activeTab, setActiveTab] = useState('Đăng nhập'); // 'Đăng nhập' | 'Đăng ký'
@@ -116,11 +116,11 @@ export default function LoginPage() {
           >
             {activeTab === 'Đăng ký' && (
               <Form.Item
-                label={<span style={{ fontWeight: 600 }}>Họ và tên</span>}
+                label={<span style={{ fontWeight: 600 }}>Họ và tên hoặc Tên Shop</span>}
                 name="fullName"
-                rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
+                rules={[{ required: true, message: 'Vui lòng nhập họ tên hoặc tên Shop' }]}
               >
-                <Input placeholder="Nguyễn Văn A" size="large" />
+                <Input placeholder="Nguyễn Văn A hoặc Tên Shop" size="large" />
               </Form.Item>
             )}
 

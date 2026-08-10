@@ -11,6 +11,8 @@ const { Title } = Typography;
 
 const UsersPage = () => {
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [babyInputType, setBabyInputType] = useState('dob');
   const [editingId, setEditingId] = useState(null);
@@ -21,12 +23,15 @@ const UsersPage = () => {
   }, []);
 
   const fetchCustomers = async () => {
+    setLoading(true);
     try {
       const res = await handleAPI('/api/customers', null, 'get');
       setData(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
       console.log(error);
       message.error('Lấy dữ liệu thất bại');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,6 +90,7 @@ const UsersPage = () => {
   };
 
   const handleFinish = async (values) => {
+    setSubmitLoading(true);
     try {
       let finalBabyDob = null;
       let finalEdd = null;
@@ -136,6 +142,8 @@ const UsersPage = () => {
     } catch (error) {
       console.log(error);
       message.error(error?.message || 'Có lỗi xảy ra');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -239,7 +247,7 @@ const UsersPage = () => {
       <Card bordered={false} className="shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <Title level={4} style={{ margin: 0 }}>Quản lý dữ liệu tiềm năng</Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={showModal} size="large" className="bg-blue-600">
+          <Button type="primary" icon={<PlusOutlined />} onClick={showModal} size="large" style={{ backgroundColor: '#0d6e57', borderColor: '#0d6e57' }}>
             Thêm dữ liệu
           </Button>
         </div>
@@ -247,6 +255,7 @@ const UsersPage = () => {
         <Table
           columns={columns}
           dataSource={data}
+          loading={loading}
           pagination={{ pageSize: 10 }}
           scroll={{ x: 1000 }}
         />
@@ -361,7 +370,7 @@ const UsersPage = () => {
           <Form.Item className="flex justify-end mt-4 mb-0">
             <Space>
               <Button onClick={handleCancel}>Hủy</Button>
-              <Button type="primary" htmlType="submit" className="bg-blue-600">
+              <Button type="primary" htmlType="submit" loading={submitLoading} style={{ backgroundColor: '#0d6e57', borderColor: '#0d6e57' }}>
                 Lưu dữ liệu
               </Button>
             </Space>
