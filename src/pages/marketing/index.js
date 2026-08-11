@@ -100,7 +100,13 @@ export default function MarketingPage() {
       title: 'Template ZNS',
       dataIndex: 'zns_template_id',
       key: 'zns_template_id',
-      render: (text) => text ? <Tag color="blue">{text}</Tag> : <span style={{ color: '#9ca3af' }}>Chưa set</span>
+      render: (text, record) => {
+        if (record.type === 'MASTER_CAMPAIGN') {
+           const subCount = record.sub_events ? record.sub_events.length : 0;
+           return <Tag color="purple">{subCount} Sự kiện con</Tag>;
+        }
+        return text ? <Tag color="blue">{text}</Tag> : <span style={{ color: '#9ca3af' }}>Chưa set</span>;
+      }
     },
     {
       title: 'Sản phẩm',
@@ -132,6 +138,9 @@ export default function MarketingPage() {
       title: 'Lịch bắn / Mốc',
       key: 'schedule',
       render: (_, record) => {
+        if (record.type === 'MASTER_CAMPAIGN') {
+          return <span style={{ color: '#0d6e57', fontWeight: 500 }}>Theo lịch sự kiện con</span>;
+        }
         if (record.is_auto_run && record.start_time) {
           return new Date(record.start_time).toLocaleString('vi-VN');
         }
@@ -205,6 +214,7 @@ export default function MarketingPage() {
                       style={{ width: 180 }}
                       options={[
                         { value: 'all', label: 'Tất cả loại' },
+                        { value: 'MASTER_CAMPAIGN', label: 'MASTER_CAMPAIGN' },
                         { value: 'LIFECYCLE', label: 'LIFECYCLE' },
                         { value: 'PRODUCT_REFILL', label: 'PRODUCT_REFILL' },
                         { value: 'PROMOTION', label: 'PROMOTION' },
