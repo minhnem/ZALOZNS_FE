@@ -24,7 +24,8 @@ import {
   SaveOutlined,
   MobileOutlined,
   PlusOutlined,
-  MinusCircleOutlined
+  MinusCircleOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../../layouts/DashboardLayout';
@@ -34,7 +35,9 @@ const { Title, Text } = Typography;
 
 export default function CreateCampaignPage() {
   const router = useRouter();
-  const { edit } = router.query; // If edit mode, edit contains campaign ID
+  const { edit, view } = router.query; 
+  const isViewMode = !!view;
+  const campaignIdToFetch = edit || view;
   const [form] = Form.useForm();
 
   const [isAutoRun, setIsAutoRun] = useState(false);
@@ -67,8 +70,8 @@ export default function CreateCampaignPage() {
   }, []);
 
   useEffect(() => {
-    if (edit) {
-      fetchCampaignDetails();
+    if (campaignIdToFetch) {
+      fetchCampaignDetails(campaignIdToFetch);
     } else {
       form.setFieldsValue({
         status: 'active',
@@ -82,7 +85,7 @@ export default function CreateCampaignPage() {
         exclude_refill_today: false
       });
     }
-  }, [edit]);
+  }, [edit, view]);
 
   // When templateId changes, find the selected template
   useEffect(() => {
@@ -122,10 +125,10 @@ export default function CreateCampaignPage() {
     }
   };
 
-  const fetchCampaignDetails = async () => {
+  const fetchCampaignDetails = async (idToFetch) => {
     try {
       setLoading(true);
-      const res = await handleAPI(`/api/campaigns/${edit}`, null, 'get');
+      const res = await handleAPI(`/api/campaigns/${idToFetch}`, null, 'get');
       if (res) {
         setIsAutoRun(res.is_auto_run);
         setHasEndTime(!!res.end_time);
@@ -216,7 +219,7 @@ export default function CreateCampaignPage() {
   };
 
   return (
-    <DashboardLayout title={edit ? "Sửa Chiến Dịch ZNS" : "Tạo Chiến Dịch ZNS"}>
+    <DashboardLayout title={isViewMode ? "Chi Tiết Chiến Dịch ZNS" : (edit ? "Sửa Chiến Dịch ZNS" : "Tạo Chiến Dịch ZNS")}>
       <Form
         form={form}
         layout="vertical"
@@ -236,11 +239,12 @@ export default function CreateCampaignPage() {
             </Button>
             <Divider type="vertical" style={{ height: 24, background: '#d1d5db' }} />
             <Title level={4} style={{ margin: 0, color: '#111827' }}>
-              {edit ? "Cập nhật chiến dịch" : "Tạo chiến dịch mới"}
+              {isViewMode ? "Chi tiết chiến dịch" : (edit ? "Cập nhật chiến dịch" : "Tạo chiến dịch mới")}
             </Title>
           </div>
 
           {/* 1. THÔNG TIN CHUNG */}
+          <fieldset disabled={isViewMode} style={{ border: 'none', padding: 0, margin: 0 }}>
           <Card
             title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>1. Thông tin chung</span>}
             bordered={false}
@@ -851,12 +855,20 @@ export default function CreateCampaignPage() {
             </div>
           </Card>
 
+          </fieldset>
+
           {/* Actions Footer */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
             <Button size="large" onClick={() => router.push('/marketing')}>Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" size="large" icon={<SaveOutlined />} style={{ fontWeight: 600 }} loading={loading}>
-              Lưu Chiến Dịch
-            </Button>
+            {isViewMode ? (
+              <Button type="primary" size="large" icon={<EditOutlined />} style={{ fontWeight: 600, background: '#d97706', borderColor: '#d97706' }} onClick={() => router.push(`/marketing/create?edit=${view}`)}>
+                Chuyển sang chế độ Sửa
+              </Button>
+            ) : (
+              <Button type="primary" htmlType="submit" size="large" icon={<SaveOutlined />} style={{ fontWeight: 600 }} loading={loading}>
+                Lưu Chiến Dịch
+              </Button>
+            )}
           </div>
 
         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, message, Popconfirm, AutoComplete } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, message, Popconfirm, AutoComplete, Upload } from 'antd';
 import handleAPI from '../../apis/handleAPI';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, ImportOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import DashboardLayout from '../../layouts/DashboardLayout';
 
@@ -18,6 +18,48 @@ const UsersPage = () => {
   const [babyInputType, setBabyInputType] = useState('dob');
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
+  
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const { Dragger } = Upload;
+
+  const handleDownloadTemplate = () => {
+    const csvContent = "\uFEFFSố điện thoại,Tên khách hàng,Ngày dự sinh,Ngày sinh bé,Tên sản phẩm mua,Số lượng,Ngày mua\n0912345678,Mẹ Lan,15/09/2026,,Bỉm Merries M58,2,10/08/2026\n0912345678,Mẹ Lan,,,Sữa Meiji số 0,1,10/08/2026";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Zalo_Import_Template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const importProps = {
+    name: 'file',
+    multiple: false,
+    customRequest: async ({ file, onSuccess, onError }) => {
+      try {
+        setImportLoading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await handleAPI('/api/customers/import', formData, 'post', {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        message.success(`Import thành công! Đã xử lý: ${res?.data?.totalRowsProcessed || 0} dòng. Khách mới: ${res?.data?.newCustomers || 0}, Đơn mới: ${res?.data?.newOrders || 0}.`);
+        onSuccess(res, file);
+        setIsImportModalVisible(false);
+        fetchCustomers();
+      } catch (error) {
+        console.error(error);
+        const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi import dữ liệu');
+        message.error(msg);
+        onError(error);
+      } finally {
+        setImportLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
     fetchCustomers();
@@ -300,9 +342,14 @@ const UsersPage = () => {
       <Card bordered={false} className="shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <Title level={4} style={{ margin: 0 }}>Quản lý dữ liệu tiềm năng</Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={showModal} size="large" style={{ backgroundColor: '#0d6e57', borderColor: '#0d6e57' }}>
-            Thêm dữ liệu
-          </Button>
+          <Space>
+            <Button icon={<ImportOutlined />} size="large" onClick={() => setIsImportModalVisible(true)}>
+              Nhập từ Excel
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={showModal} size="large" style={{ backgroundColor: '#0d6e57', borderColor: '#0d6e57' }}>
+              Thêm dữ liệu
+            </Button>
+          </Space>
         </div>
 
         <Table
@@ -484,6 +531,32 @@ const UsersPage = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Nhập Dữ Liệu Khách Hàng & Đơn Hàng từ Excel"
+        open={isImportModalVisible}
+        onCancel={() => setIsImportModalVisible(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Typography.Text>Hệ thống hỗ trợ nhập liệu thông qua file Excel hoặc CSV. Vui lòng tải file mẫu để xem định dạng chuẩn.</Typography.Text>
+          <div style={{ marginTop: 12, marginBottom: 24 }}>
+            <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate} style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>
+              Tải file mẫu (.csv)
+            </Button>
+          </div>
+        </div>
+        <Dragger {...importProps}>
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined style={{ color: '#0d6e57' }} />
+          </p>
+          <p className="ant-upload-text">Kéo thả file vào khu vực này hoặc nhấp để chọn file</p>
+          <p className="ant-upload-hint">
+            Hỗ trợ file định dạng .xlsx, .xls, .csv. File không được vượt quá 10MB.
+          </p>
+        </Dragger>
       </Modal>
     </DashboardLayout>
   );

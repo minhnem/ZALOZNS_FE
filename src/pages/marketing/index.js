@@ -155,6 +155,9 @@ export default function MarketingPage() {
       key: 'action',
       render: (_, record) => (
         <Space size="small">
+          <Tooltip title="Xem chi tiết">
+            <Button type="text" style={{ color: '#0ea5e9' }} icon={<EyeOutlined />} onClick={() => router.push(`/marketing/create?view=${record._id}`)} />
+          </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button type="text" icon={<EditOutlined />} onClick={() => router.push(`/marketing/create?edit=${record._id}`)} />
           </Tooltip>
