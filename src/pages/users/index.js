@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, message, Popconfirm } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, message, Popconfirm, AutoComplete } from 'antd';
 import handleAPI from '../../apis/handleAPI';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import DashboardLayout from '../../layouts/DashboardLayout';
 
@@ -11,6 +11,7 @@ const { Title } = Typography;
 
 const UsersPage = () => {
   const [data, setData] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -20,7 +21,17 @@ const UsersPage = () => {
 
   useEffect(() => {
     fetchCustomers();
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await handleAPI('/api/products', null, 'get');
+      setProducts(res || []);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -65,6 +76,13 @@ const UsersPage = () => {
       status: record.status || 'active',
       pregnancy_weeks: computedPregnancyWeeks,
       baby_dob: record.baby_dob ? dayjs(record.baby_dob) : null,
+      orders: record.orders && record.orders.length > 0 
+        ? record.orders.map(o => ({
+            product_name: o.product_name,
+            purchase_date: o.purchase_date ? dayjs(o.purchase_date) : null,
+            quantity: o.quantity || 1
+          }))
+        : [{ product_name: undefined, purchase_date: undefined, quantity: 1 }]
     };
 
     setBabyInputType('dob');
@@ -116,6 +134,17 @@ const UsersPage = () => {
         finalEdd = dayjs().add(weeksLeft, 'week').format('YYYY-MM-DD');
       }
 
+      // Xử lý Orders array
+      const processedOrders = values.orders 
+        ? values.orders
+            .filter(o => o && o.product_name)
+            .map(o => ({
+              product_name: o.product_name.trim(),
+              purchase_date: o.purchase_date ? o.purchase_date.toISOString() : null,
+              quantity: o.quantity || 1
+            }))
+        : [];
+
       const payload = {
         name: values.name,
         phone: values.phone,
@@ -123,7 +152,8 @@ const UsersPage = () => {
         baby_dob: finalBabyDob,
         is_estimated_dob: isEstimatedDob,
         edd: finalEdd,
-        status: values.status
+        status: values.status,
+        orders: processedOrders
       };
 
       if (editingId) {
@@ -209,6 +239,29 @@ const UsersPage = () => {
       },
     },
     {
+      title: 'Sản phẩm theo dõi',
+      key: 'products',
+      render: (_, record) => {
+        if (!record.purchased_products || record.purchased_products.length === 0) {
+          return <span className="text-gray-400">Chưa có đơn</span>;
+        }
+        return (
+          <ul className="pl-4 m-0">
+            {record.purchased_products.map((p, idx) => (
+              <li key={idx} className="mb-1">
+                <strong>{p.product_name}</strong>
+                {p.expected_refill_date && (
+                  <div className="text-xs text-gray-500">
+                    Dự kiến hết: {new Date(p.expected_refill_date).toLocaleDateString('vi-VN')}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        );
+      },
+    },
+    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
@@ -272,7 +325,7 @@ const UsersPage = () => {
           form={form}
           layout="vertical"
           onFinish={handleFinish}
-          initialValues={{ status: 'active' }}
+          initialValues={{ status: 'active', orders: [{ product_name: undefined, purchase_date: undefined }] }}
           className="mt-4"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -364,6 +417,61 @@ const UsersPage = () => {
               >
                 <InputNumber min={0} max={42} style={{ width: '100%' }} placeholder="Nhập số tuần thai..." addonAfter="tuần" />
               </Form.Item>
+            </div>
+            
+            <div className="col-span-1 md:col-span-2 bg-blue-50 p-4 rounded border border-blue-200">
+              <div className="mb-2 font-medium text-blue-800">Sản phẩm khách đã mua (Tùy chọn)</div>
+              
+              <Form.List name="orders">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <div key={key} className="flex gap-4 items-start mb-4">
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'product_name']}
+                          label={name === 0 ? "Tên Sản phẩm" : ""}
+                          className="mb-0 flex-1"
+                          tooltip={name === 0 ? "Bạn có thể gõ tên sản phẩm mới, hệ thống tự động lưu." : ""}
+                        >
+                          <AutoComplete
+                            placeholder="VD: Bỉm Moony Blue M"
+                            allowClear
+                            options={products.map(p => ({ value: p.name, label: p.name }))}
+                            filterOption={(inputValue, option) =>
+                              option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                            }
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'purchase_date']}
+                          label={name === 0 ? "Ngày mua hàng" : ""}
+                          className="mb-0 flex-1"
+                        >
+                          <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Ngày mua (Mặc định: Hôm nay)" />
+                        </Form.Item>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'quantity']}
+                          label={name === 0 ? "Số lượng" : ""}
+                          className="mb-0 w-24"
+                        >
+                          <InputNumber min={1} style={{ width: '100%' }} placeholder="SL" />
+                        </Form.Item>
+                        <div className={name === 0 ? "mt-8" : "mt-1"}>
+                          <MinusCircleOutlined className="text-red-500 text-lg cursor-pointer" onClick={() => remove(name)} />
+                        </div>
+                      </div>
+                    ))}
+                    <Form.Item className="mb-0">
+                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                        Thêm sản phẩm
+                      </Button>
+                    </Form.Item>
+                  </>
+                )}
+              </Form.List>
             </div>
           </div>
 

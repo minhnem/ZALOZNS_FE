@@ -39,6 +39,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 
 export default function CustomersPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -78,7 +79,7 @@ export default function CustomersPage() {
       const res = await handleAPI('/api/customers?type=BUYER', null, 'get');
       setCustomers(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
-      message.error('Lấy dữ liệu khách hàng thất bại');
+      messageApi.error('Lấy dữ liệu khách hàng thất bại');
     } finally {
       setLoading(false);
     }
@@ -91,12 +92,13 @@ export default function CustomersPage() {
         purchase_date: values.purchase_date ? values.purchase_date.toISOString() : null
       };
       await handleAPI('/api/customers', payload, 'post');
-      message.success('Thêm khách hàng thành công!');
+      messageApi.success('Thêm khách hàng thành công!');
       setIsModalVisible(false);
       form.resetFields();
       fetchCustomers();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi thêm khách hàng');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi thêm khách hàng');
+      messageApi.error(msg);
     }
   };
 
@@ -120,7 +122,7 @@ export default function CustomersPage() {
       const res = await handleAPI(`/api/orders?customer_id=${customerId}`, null, 'get');
       setCustomerOrders(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
-      message.error('Lỗi khi lấy danh sách đơn hàng');
+      messageApi.error('Lỗi khi lấy danh sách đơn hàng');
     } finally {
       setOrdersLoading(false);
     }
@@ -129,11 +131,11 @@ export default function CustomersPage() {
   const handleDeleteOrder = async (orderId) => {
     try {
       await handleAPI(`/api/orders/${orderId}`, null, 'delete');
-      message.success('Xóa đơn hàng thành công!');
+      messageApi.success('Xóa đơn hàng thành công!');
       if (selectedCustomer) fetchCustomerOrders(selectedCustomer._id);
       fetchCustomers();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi xóa đơn hàng');
+      messageApi.error(error.message || 'Lỗi khi xóa đơn hàng');
     }
   };
 
@@ -152,13 +154,13 @@ export default function CustomersPage() {
         purchase_date: values.purchase_date ? values.purchase_date.toISOString() : null
       };
       await handleAPI(`/api/orders/${editingOrderId}`, payload, 'put');
-      message.success('Cập nhật đơn hàng thành công!');
+      messageApi.success('Cập nhật đơn hàng thành công!');
       setIsEditOrderVisible(false);
       editOrderForm.resetFields();
       if (selectedCustomer) fetchCustomerOrders(selectedCustomer._id);
       fetchCustomers();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi cập nhật đơn hàng');
+      messageApi.error(error.message || 'Lỗi khi cập nhật đơn hàng');
     }
   };
 
@@ -169,22 +171,23 @@ export default function CustomersPage() {
         purchase_date: values.purchase_date ? values.purchase_date.toISOString() : null
       };
       await handleAPI(`/api/customers/${editingCustomerId}`, payload, 'put');
-      message.success('Cập nhật khách hàng thành công!');
+      messageApi.success('Cập nhật khách hàng thành công!');
       setIsEditModalVisible(false);
       editForm.resetFields();
       fetchCustomers();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi cập nhật khách hàng');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi cập nhật khách hàng');
+      messageApi.error(msg);
     }
   };
 
   const handleDeleteCustomer = async (id) => {
     try {
       await handleAPI(`/api/customers/${id}`, null, 'delete');
-      message.success('Xóa khách hàng thành công!');
+      messageApi.success('Xóa khách hàng thành công!');
       fetchCustomers();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi xóa khách hàng');
+      messageApi.error(error.message || 'Lỗi khi xóa khách hàng');
     }
   };
 
@@ -271,6 +274,7 @@ export default function CustomersPage() {
 
   return (
     <DashboardLayout title="Quản lý Khách hàng">
+      {contextHolder}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
         
         {/* HEADER */}

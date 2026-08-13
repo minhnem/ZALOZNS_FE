@@ -133,7 +133,14 @@ export default function CreateCampaignPage() {
           ...res,
           start_time: res.start_time ? dayjs(res.start_time) : null,
           end_time: res.end_time ? dayjs(res.end_time) : null,
-          sub_events: res.sub_events ? res.sub_events.map(ev => ({...ev, execute_time: dayjs(ev.execute_time)})) : [],
+          sub_events: res.sub_events ? res.sub_events.map(ev => ({
+            ...ev,
+            execute_time: dayjs(ev.execute_time),
+            audience_condition: ev.audience_condition ? {
+              ...ev.audience_condition,
+              product_id: ev.audience_condition.product_id?._id || ev.audience_condition.product_id
+            } : { type: 'ALL' }
+          })) : [],
           // Parse cron string to time for TimePicker
           recurring_schedule_time: res.recurring_schedule ? (() => {
             const parts = res.recurring_schedule.split(' ');
@@ -143,6 +150,11 @@ export default function CreateCampaignPage() {
           // product_id có thể là object (do populate) → lấy _id, nếu null thì gán là 'all'
           product_id: res.product_id?._id || res.product_id || 'all',
           exclude_refill_today: res.exclude_refill_today || false,
+          milestones: res.milestones ? res.milestones.map(m => ({
+            ...m,
+            product_id: m.product_id?._id || m.product_id,
+            usage_cycle_days: m.product_id?.usage_cycle_days || m.usage_cycle_days
+          })) : [],
         });
       }
     } catch (error) {
@@ -260,8 +272,8 @@ export default function CreateCampaignPage() {
                 </Form.Item>
               </div>
 
-              {/* Chọn sản phẩm — Luôn hiển thị để phục vụ lọc thêm cho mọi loại chiến dịch ngoại trừ Vòng đời */}
-              {(campaignType !== 'LIFECYCLE' && campaignType !== 'MASTER_CAMPAIGN') && (
+              {/* Chọn sản phẩm — Luôn hiển thị để phục vụ lọc thêm cho mọi loại chiến dịch ngoại trừ Vòng đời và Nhắc mua lại */}
+              {(campaignType !== 'LIFECYCLE' && campaignType !== 'MASTER_CAMPAIGN' && campaignType !== 'PRODUCT_REFILL') && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 160, fontWeight: 500 }}>Sản phẩm:</div>
                   <Form.Item
@@ -290,7 +302,7 @@ export default function CreateCampaignPage() {
 
               {campaignType === 'PRODUCT_REFILL' && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 160, fontWeight: 500 }}>Nhắc trước/sau (Ngày):</div>
+                  <div style={{ width: 160, fontWeight: 500 }}>Nhắc trước (Ngày):</div>
                   <Form.Item
                     name="refill_reminder_days"
                     style={{ flex: 1, maxWidth: 600, marginBottom: 0 }}
@@ -329,166 +341,168 @@ export default function CreateCampaignPage() {
           </Card>
 
           {/* 2. CẤU HÌNH TỆP KHÁCH HÀNG MỤC TIÊU */}
-          <Card
-            title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. Cấu hình tệp khách hàng mục tiêu (Target Audience)</span>}
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, background: '#f9fafb', padding: 20, borderRadius: 8, border: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: 160, fontWeight: 500 }}>Chọn nhóm đối tượng:</div>
-                <Form.Item name={['target_audience', 'audience_type']} style={{ flex: 1, maxWidth: 600, marginBottom: 0 }}>
-                  <Select
-                    size="large"
-                    options={[
-                      { value: 'ALL', label: 'Tất cả khách hàng (ALL)' },
-                      { value: 'LEAD', label: 'Khách tiềm năng chưa mua hàng (LEAD)' },
-                      { value: 'PREGNANT', label: 'Khách hàng mẹ bầu (PREGNANT)' },
-                      { value: 'BABY', label: 'Khách hàng có con nhỏ (BABY)' },
-                      { value: 'BOUGHT_PRODUCT', label: 'Khách đã từng mua sản phẩm X' },
-                      { value: 'REFILL_DUE', label: 'Khách sắp hết sản phẩm X (REFILL_DUE)' },
-                      { value: 'CUSTOM', label: 'Tự chọn thủ công khách hàng (CUSTOM)' }
-                    ]}
-                  />
-                </Form.Item>
+          {campaignType !== 'PRODUCT_REFILL' && (
+            <Card
+              title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. Cấu hình tệp khách hàng mục tiêu (Target Audience)</span>}
+              bordered={false}
+              style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, background: '#f9fafb', padding: 20, borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: 160, fontWeight: 500 }}>Chọn nhóm đối tượng:</div>
+                  <Form.Item name={['target_audience', 'audience_type']} style={{ flex: 1, maxWidth: 600, marginBottom: 0 }}>
+                    <Select
+                      size="large"
+                      options={[
+                        { value: 'ALL', label: 'Tất cả khách hàng (ALL)' },
+                        { value: 'LEAD', label: 'Khách tiềm năng chưa mua hàng (LEAD)' },
+                        { value: 'PREGNANT', label: 'Khách hàng mẹ bầu (PREGNANT)' },
+                        { value: 'BABY', label: 'Khách hàng có con nhỏ (BABY)' },
+                        { value: 'BOUGHT_PRODUCT', label: 'Khách đã từng mua sản phẩm X' },
+                        { value: 'REFILL_DUE', label: 'Khách sắp hết sản phẩm X (REFILL_DUE)' },
+                        { value: 'CUSTOM', label: 'Tự chọn thủ công khách hàng (CUSTOM)' }
+                      ]}
+                    />
+                  </Form.Item>
+                </div>
+
+                {/* Tùy chọn cho BOUGHT_PRODUCT hoặc REFILL_DUE */}
+                {(targetAudienceWatch.audience_type === 'BOUGHT_PRODUCT' || targetAudienceWatch.audience_type === 'REFILL_DUE') && (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ width: 160, fontWeight: 500 }}>Chọn Sản phẩm <span style={{ color: 'red' }}>*</span>:</div>
+                    <Form.Item name={['target_audience', 'product_id']} style={{ flex: 1, maxWidth: 600, marginBottom: 0 }} rules={[{ required: true, message: 'Vui lòng chọn sản phẩm' }]}>
+                      <Select
+                        size="large"
+                        placeholder="Chọn sản phẩm"
+                        showSearch
+                        optionFilterProp="label"
+                        options={products.map(p => ({ value: p._id, label: p.name }))}
+                      />
+                    </Form.Item>
+                  </div>
+                )}
+
+                {/* Tùy chọn cho REFILL_DUE */}
+                {targetAudienceWatch.audience_type === 'REFILL_DUE' && (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ width: 160, fontWeight: 500 }}>Sắp hết trong vòng <span style={{ color: 'red' }}>*</span>:</div>
+                    <Form.Item name={['target_audience', 'refill_days_left']} style={{ flex: 1, maxWidth: 200, marginBottom: 0 }} rules={[{ required: true, message: 'Vui lòng nhập số ngày' }]}>
+                      <InputNumber size="large" min={1} style={{ width: '100%' }} placeholder="VD: 5 ngày" />
+                    </Form.Item>
+                  </div>
+                )}
+
+                {/* Tùy chọn cho BABY */}
+                {targetAudienceWatch.audience_type === 'BABY' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 160, fontWeight: 500 }}>Độ tuổi bé (Tháng):</div>
+                    <Form.Item name={['target_audience', 'baby_age_months_min']} style={{ marginBottom: 0 }}>
+                      <InputNumber size="large" min={0} placeholder="Từ (tháng)" />
+                    </Form.Item>
+                    <Text>-</Text>
+                    <Form.Item name={['target_audience', 'baby_age_months_max']} style={{ marginBottom: 0 }}>
+                      <InputNumber size="large" min={1} placeholder="Đến (tháng)" />
+                    </Form.Item>
+                  </div>
+                )}
+
+                {/* Tùy chọn cho CUSTOM */}
+                {targetAudienceWatch.audience_type === 'CUSTOM' && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <div style={{ width: 160, fontWeight: 500, marginTop: 8 }}>Chọn Khách hàng <span style={{ color: 'red' }}>*</span>:</div>
+                    <Form.Item name={['target_audience', 'customer_ids']} style={{ flex: 1, maxWidth: 600, marginBottom: 0 }} rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 khách hàng' }]}>
+                      <Select
+                        mode="multiple"
+                        size="large"
+                        placeholder="Tìm kiếm và chọn khách hàng..."
+                        showSearch
+                        optionFilterProp="label"
+                        options={customers.map(c => ({ value: c._id, label: `${c.name} - ${c.phone}` }))}
+                        style={{ width: '100%' }}
+                      />
+                    </Form.Item>
+                  </div>
+                )}
               </div>
-
-              {/* Tùy chọn cho BOUGHT_PRODUCT hoặc REFILL_DUE */}
-              {(targetAudienceWatch.audience_type === 'BOUGHT_PRODUCT' || targetAudienceWatch.audience_type === 'REFILL_DUE') && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 160, fontWeight: 500 }}>Chọn Sản phẩm <span style={{ color: 'red' }}>*</span>:</div>
-                  <Form.Item name={['target_audience', 'product_id']} style={{ flex: 1, maxWidth: 600, marginBottom: 0 }} rules={[{ required: true, message: 'Vui lòng chọn sản phẩm' }]}>
-                    <Select
-                      size="large"
-                      placeholder="Chọn sản phẩm"
-                      showSearch
-                      optionFilterProp="label"
-                      options={products.map(p => ({ value: p._id, label: p.name }))}
-                    />
-                  </Form.Item>
-                </div>
-              )}
-
-              {/* Tùy chọn cho REFILL_DUE */}
-              {targetAudienceWatch.audience_type === 'REFILL_DUE' && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 160, fontWeight: 500 }}>Sắp hết trong vòng <span style={{ color: 'red' }}>*</span>:</div>
-                  <Form.Item name={['target_audience', 'refill_days_left']} style={{ flex: 1, maxWidth: 200, marginBottom: 0 }} rules={[{ required: true, message: 'Vui lòng nhập số ngày' }]}>
-                    <InputNumber size="large" min={1} style={{ width: '100%' }} placeholder="VD: 5 ngày" />
-                  </Form.Item>
-                </div>
-              )}
-
-              {/* Tùy chọn cho BABY */}
-              {targetAudienceWatch.audience_type === 'BABY' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 160, fontWeight: 500 }}>Độ tuổi bé (Tháng):</div>
-                  <Form.Item name={['target_audience', 'baby_age_months_min']} style={{ marginBottom: 0 }}>
-                    <InputNumber size="large" min={0} placeholder="Từ (tháng)" />
-                  </Form.Item>
-                  <Text>-</Text>
-                  <Form.Item name={['target_audience', 'baby_age_months_max']} style={{ marginBottom: 0 }}>
-                    <InputNumber size="large" min={1} placeholder="Đến (tháng)" />
-                  </Form.Item>
-                </div>
-              )}
-
-              {/* Tùy chọn cho CUSTOM */}
-              {targetAudienceWatch.audience_type === 'CUSTOM' && (
-                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                  <div style={{ width: 160, fontWeight: 500, marginTop: 8 }}>Chọn Khách hàng <span style={{ color: 'red' }}>*</span>:</div>
-                  <Form.Item name={['target_audience', 'customer_ids']} style={{ flex: 1, maxWidth: 600, marginBottom: 0 }} rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 khách hàng' }]}>
-                    <Select
-                      mode="multiple"
-                      size="large"
-                      placeholder="Tìm kiếm và chọn khách hàng..."
-                      showSearch
-                      optionFilterProp="label"
-                      options={customers.map(c => ({ value: c._id, label: `${c.name} - ${c.phone}` }))}
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                </div>
-              )}
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* 3. CẤU HÌNH THỜI GIAN */}
           {campaignType !== 'MASTER_CAMPAIGN' && (
             <Card
-              title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>3. Cấu hình thời gian chạy</span>}
+              title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'PRODUCT_REFILL' ? '2' : '3'}. Cấu hình thời gian chạy</span>}
               bordered={false}
               style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
             >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, background: '#f9fafb', padding: 20, borderRadius: 8, border: '1px solid #e5e7eb' }}>
-              <Row align="middle">
-                <Col span={6}><Text type="secondary">Chế độ chạy:</Text></Col>
-                <Col span={18}>
-                  <Switch checked={isAutoRun} onChange={setIsAutoRun} />
-                  <Text style={{ marginLeft: 12, fontWeight: 500 }}>
-                    Chạy tự động theo lịch (Auto-run)
-                  </Text>
-                </Col>
-              </Row>
-
-              {isAutoRun && (
-                <Row align="middle" style={{ marginTop: 16 }}>
-                  <Col span={6}><Text type="secondary">Giờ chạy hàng ngày:</Text></Col>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, background: '#f9fafb', padding: 20, borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                <Row align="middle">
+                  <Col span={6}><Text type="secondary">Chế độ chạy:</Text></Col>
                   <Col span={18}>
-                    <Form.Item name="recurring_schedule_time" style={{ marginBottom: 0 }} initialValue={dayjs('09:00', 'HH:mm')}>
-                      <TimePicker format="HH:mm" size="large" allowClear={false} />
-                    </Form.Item>
-                    <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
-                      Hệ thống sẽ tự động quét và gửi ZNS vào khung giờ này mỗi ngày.
+                    <Switch checked={isAutoRun} onChange={setIsAutoRun} />
+                    <Text style={{ marginLeft: 12, fontWeight: 500 }}>
+                      Chạy tự động theo lịch (Auto-run)
                     </Text>
                   </Col>
                 </Row>
-              )}
 
-              <Row align="middle">
-                <Col span={6}><Text type="secondary">Thời gian bắt đầu:</Text></Col>
-                <Col span={18}>
-                  <Form.Item name="start_time" style={{ marginBottom: 0 }}>
-                    <DatePicker
-                      showTime
-                      format="DD/MM/YYYY HH:mm"
-                      size="large"
-                      disabled={!isAutoRun}
-                      placeholder="Chọn thời gian bắt đầu"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
+                {isAutoRun && (
+                  <Row align="middle" style={{ marginTop: 16 }}>
+                    <Col span={6}><Text type="secondary">Giờ chạy hàng ngày:</Text></Col>
+                    <Col span={18}>
+                      <Form.Item name="recurring_schedule_time" style={{ marginBottom: 0 }} initialValue={dayjs('09:00', 'HH:mm')}>
+                        <TimePicker format="HH:mm" size="large" allowClear={false} />
+                      </Form.Item>
+                      <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
+                        Hệ thống sẽ tự động quét và gửi ZNS vào khung giờ này mỗi ngày.
+                      </Text>
+                    </Col>
+                  </Row>
+                )}
 
-              <Divider style={{ margin: '12px 0' }} />
-
-              <Row align="middle">
-                <Col span={6}><Text type="secondary">Chế độ kết thúc:</Text></Col>
-                <Col span={18}>
-                  <Switch checked={hasEndTime} onChange={setHasEndTime} />
-                  <Text style={{ marginLeft: 12, fontWeight: 500 }}>
-                    Set lịch dừng hoạt động (Tự động kết thúc chiến dịch)
-                  </Text>
-                </Col>
-              </Row>
-
-              {hasEndTime && (
-                <Row align="middle" style={{ marginTop: 16 }}>
-                  <Col span={6}><Text type="secondary">Thời gian kết thúc:</Text></Col>
+                <Row align="middle">
+                  <Col span={6}><Text type="secondary">Thời gian bắt đầu:</Text></Col>
                   <Col span={18}>
-                    <Form.Item name="end_time" style={{ marginBottom: 0 }}>
-                      <DatePicker showTime format="DD/MM/YYYY HH:mm" size="large" placeholder="Chọn ngày & giờ kết thúc" />
+                    <Form.Item name="start_time" style={{ marginBottom: 0 }}>
+                      <DatePicker
+                        showTime
+                        format="DD/MM/YYYY HH:mm"
+                        size="large"
+                        disabled={!isAutoRun}
+                        placeholder="Chọn thời gian bắt đầu"
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
-              )}
-            </div>
-          </Card>
+
+                <Divider style={{ margin: '12px 0' }} />
+
+                <Row align="middle">
+                  <Col span={6}><Text type="secondary">Chế độ kết thúc:</Text></Col>
+                  <Col span={18}>
+                    <Switch checked={hasEndTime} onChange={setHasEndTime} />
+                    <Text style={{ marginLeft: 12, fontWeight: 500 }}>
+                      Set lịch dừng hoạt động (Tự động kết thúc chiến dịch)
+                    </Text>
+                  </Col>
+                </Row>
+
+                {hasEndTime && (
+                  <Row align="middle" style={{ marginTop: 16 }}>
+                    <Col span={6}><Text type="secondary">Thời gian kết thúc:</Text></Col>
+                    <Col span={18}>
+                      <Form.Item name="end_time" style={{ marginBottom: 0 }}>
+                        <DatePicker showTime format="DD/MM/YYYY HH:mm" size="large" placeholder="Chọn ngày & giờ kết thúc" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                )}
+              </div>
+            </Card>
           )}
 
           {/* 4. CẤU HÌNH KỊCH BẢN & CHỌN TEMPLATE */}
           <Card
-            title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'MASTER_CAMPAIGN' ? '3' : '4'}. Cấu hình kịch bản & Chọn template</span>}
+            title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'MASTER_CAMPAIGN' ? '3' : campaignType === 'PRODUCT_REFILL' ? '3' : '4'}. Cấu hình kịch bản & Chọn template</span>}
             bordered={false}
             style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
           >
@@ -496,7 +510,7 @@ export default function CreateCampaignPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                 {/* TEMPLATE SELECTOR */}
-                {(campaignType !== 'LIFECYCLE' && campaignType !== 'MASTER_CAMPAIGN') && (
+                {(campaignType !== 'LIFECYCLE' && campaignType !== 'MASTER_CAMPAIGN' && campaignType !== 'PRODUCT_REFILL') && (
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <Text strong style={{ width: 190 }}>Chọn Template ZNS: </Text>
                     <Form.Item name="zns_template_id" style={{ marginBottom: 0, flex: 1, maxWidth: 510 }}>
@@ -517,18 +531,21 @@ export default function CreateCampaignPage() {
 
                 {/* DYNAMIC FIELDS & MILESTONES */}
                 <div style={{ marginTop: 8 }}>
-                  {campaignType === 'LIFECYCLE' ? (
+                  {(campaignType === 'LIFECYCLE' || campaignType === 'PRODUCT_REFILL') ? (
                     <div>
-                      <Text strong style={{ display: 'block', marginBottom: 12 }}>Cấu hình kịch bản theo Mốc thời gian:</Text>
+                      <Text strong style={{ display: 'block', marginBottom: 12 }}>
+                        {campaignType === 'LIFECYCLE' ? 'Cấu hình kịch bản theo Mốc thời gian:' : 'Cấu hình kịch bản theo Sản phẩm (Refill):'}
+                      </Text>
                       <Form.List name="milestones">
                         {(fields, { add, remove }) => (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                              {fields.map(({ key, name, ...restField }) => (
-                                <Card key={key} size="small" style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 8 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                                    <Text strong>Mốc thời gian {name + 1}</Text>
-                                    <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red', fontSize: 18, cursor: 'pointer' }} />
-                                  </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {fields.map(({ key, name, ...restField }) => (
+                              <Card key={key} size="small" style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 8 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                                  <Text strong>{campaignType === 'LIFECYCLE' ? `Mốc thời gian ${name + 1}` : `Cấu hình Sản phẩm ${name + 1}`}</Text>
+                                  <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red', fontSize: 18, cursor: 'pointer' }} />
+                                </div>
+                                {campaignType === 'LIFECYCLE' ? (
                                   <Row gutter={16} style={{ marginBottom: 12 }}>
                                     <Col span={8}>
                                       <Form.Item {...restField} name={[name, 'stage']} rules={[{ required: true, message: 'Chọn Giai đoạn' }]} style={{ marginBottom: 0 }}>
@@ -553,127 +570,232 @@ export default function CreateCampaignPage() {
                                       </Form.Item>
                                     </Col>
                                   </Row>
-                                  
-                                  <Divider style={{ margin: '12px 0' }} />
-                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                                    <div style={{ width: 160, fontWeight: 500 }}>Chọn Template:</div>
-                                    <Form.Item {...restField} name={[name, 'zns_template_id']} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: 'Chọn Template' }]}>
-                                      <Select
-                                        size="large"
-                                        placeholder="-- Chọn Template Zalo ZNS --"
-                                        showSearch
-                                        optionFilterProp="label"
-                                        options={templates.map(t => ({
-                                          value: t.template_id,
-                                          label: `${t.template_id} - ${t.name}`
-                                        }))}
-                                      />
-                                    </Form.Item>
-                                  </div>
-                                  
-                                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Nội dung Template tại mốc này:</Text>
-                                  
-                                  {(() => {
-                                    const mTemplateId = milestonesWatch[name]?.zns_template_id;
-                                    const mTemplate = templates.find(t => t.template_id === mTemplateId);
-                                    if (!mTemplate) return <Text type="secondary">Vui lòng chọn Template ZNS cho mốc này.</Text>;
-                                    if (!mTemplate.params || mTemplate.params.length === 0) return <Text type="secondary">Template này không có biến động nào.</Text>;
-                                    
-                                    return mTemplate.params.filter(p => p.type !== 'SYSTEM').map((param) => (
-                                      <div key={param.name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                        <div style={{ width: 200, fontWeight: 500 }}>
-                                          <code style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, fontSize: 13, color: '#111827' }}>{param.name}</code>
+                                ) : (
+                                  <>
+                                    <Row gutter={16} style={{ marginBottom: 12 }}>
+                                      <Col span={12}>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                          <div style={{ width: 120, fontWeight: 500 }}>Sản phẩm <span style={{ color: 'red' }}>*</span>:</div>
+                                          <Form.Item {...restField} name={[name, 'product_id']} rules={[{ required: true, message: 'Chọn sản phẩm' }]} style={{ flex: 1, marginBottom: 0 }}>
+                                            <Select
+                                              size="large"
+                                              placeholder="-- Chọn sản phẩm --"
+                                              showSearch
+                                              optionFilterProp="label"
+                                              options={products.map(p => ({
+                                                value: p._id,
+                                                label: p.name
+                                              }))}
+                                              onChange={(val) => {
+                                                const prod = products.find(p => p._id === val);
+                                                if (prod && prod.usage_cycle_days) {
+                                                  const currentMilestones = form.getFieldValue('milestones');
+                                                  if (currentMilestones && currentMilestones[name]) {
+                                                    currentMilestones[name].usage_cycle_days = prod.usage_cycle_days;
+                                                    form.setFieldsValue({ milestones: currentMilestones });
+                                                  }
+                                                }
+                                              }}
+                                            />
+                                          </Form.Item>
                                         </div>
-                                        <Form.Item {...restField} name={[name, 'dynamic_data', param.name]} style={{ flex: 1, marginBottom: 0 }}>
-                                          <Input size="large" placeholder={param.label ? `VD: ${param.label}` : `Nhập giá trị cho ${param.name}...`} />
-                                        </Form.Item>
+                                      </Col>
+                                      <Col span={12}>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                          <div style={{ width: 120, fontWeight: 500 }}>Chu kỳ (ngày) <span style={{ color: 'red' }}>*</span>:</div>
+                                          <Form.Item {...restField} name={[name, 'usage_cycle_days']} rules={[{ required: true, message: 'Nhập chu kỳ' }]} style={{ flex: 1, marginBottom: 0 }}>
+                                            <InputNumber size="large" min={1} style={{ width: '100%' }} placeholder="VD: 30" />
+                                          </Form.Item>
+                                        </div>
+                                      </Col>
+                                    </Row>
+
+                                    <Row gutter={16} style={{ marginBottom: 12 }}>
+                                      <Col span={12}>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                          <div style={{ width: 120, fontWeight: 500 }}>Nhắc trước (ngày):</div>
+                                          <Form.Item {...restField} name={[name, 'remind_before_days']} initialValue={3} style={{ flex: 1, marginBottom: 0 }}>
+                                            <InputNumber size="large" min={0} style={{ width: '100%' }} placeholder="VD: 3" />
+                                          </Form.Item>
+                                        </div>
+                                      </Col>
+                                      <Col span={12}>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                                          <Form.Item {...restField} name={[name, 'remind_on_exact_date']} valuePropName="checked" initialValue={true} style={{ flex: 1, marginBottom: 0 }}>
+                                            <Checkbox style={{ fontWeight: 500 }}>Đồng thời gửi nhắc vào ĐÚNG NGÀY hết</Checkbox>
+                                          </Form.Item>
+                                        </div>
+                                      </Col>
+                                    </Row>
+                                  </>
+                                )}
+
+                                <Divider style={{ margin: '12px 0' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+                                  <div style={{ width: 160, fontWeight: 500 }}>Chọn Template:</div>
+                                  <Form.Item {...restField} name={[name, 'zns_template_id']} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: 'Chọn Template' }]}>
+                                    <Select
+                                      size="large"
+                                      placeholder="-- Chọn Template Zalo ZNS --"
+                                      showSearch
+                                      optionFilterProp="label"
+                                      options={templates.map(t => ({
+                                        value: t.template_id,
+                                        label: `${t.template_id} - ${t.name}`
+                                      }))}
+                                    />
+                                  </Form.Item>
+                                </div>
+
+                                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Nội dung Template tại mốc này:</Text>
+
+                                {(() => {
+                                  const mTemplateId = milestonesWatch[name]?.zns_template_id;
+                                  const mTemplate = templates.find(t => t.template_id === mTemplateId);
+                                  if (!mTemplate) return <Text type="secondary">Vui lòng chọn Template ZNS cho mốc này.</Text>;
+                                  if (!mTemplate.params || mTemplate.params.length === 0) return <Text type="secondary">Template này không có biến động nào.</Text>;
+
+                                  return mTemplate.params.filter(p => p.type !== 'SYSTEM').map((param) => (
+                                    <div key={param.name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                      <div style={{ width: 200, fontWeight: 500 }}>
+                                        <code style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, fontSize: 13, color: '#111827' }}>{param.name}</code>
                                       </div>
-                                    ));
-                                  })()}
-                                </Card>
-                              ))}
-                              <Button type="dashed" onClick={() => add({ time_unit: 'MONTH' })} block icon={<PlusOutlined />} style={{ height: 40 }}>
-                                Thêm mốc thời gian
-                              </Button>
-                            </div>
-                          )}
-                        </Form.List>
+                                      <Form.Item {...restField} name={[name, 'dynamic_data', param.name]} style={{ flex: 1, marginBottom: 0 }}>
+                                        <Input size="large" placeholder={param.label ? `VD: ${param.label}` : `Nhập giá trị cho ${param.name}...`} />
+                                      </Form.Item>
+                                    </div>
+                                  ));
+                                })()}
+                              </Card>
+                            ))}
+                            <Button type="dashed" onClick={() => add(campaignType === 'LIFECYCLE' ? { time_unit: 'MONTH' } : { remind_before_days: 3, remind_on_exact_date: true })} block icon={<PlusOutlined />} style={{ height: 40 }}>
+                              {campaignType === 'LIFECYCLE' ? 'Thêm mốc thời gian' : 'Thêm cấu hình sản phẩm'}
+                            </Button>
+                          </div>
+                        )}
+                      </Form.List>
                     </div>
                   ) : campaignType === 'MASTER_CAMPAIGN' ? (
                     <div>
                       <Text strong style={{ display: 'block', marginBottom: 12 }}>Cấu hình các Sự kiện con (Sub-Events):</Text>
                       <Form.List name="sub_events">
                         {(fields, { add, remove }) => (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                              {fields.map(({ key, name, ...restField }) => (
-                                <Card key={key} size="small" style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 8 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                                    <Text strong>Sự kiện {name + 1}</Text>
-                                    <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red', fontSize: 18, cursor: 'pointer' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {fields.map(({ key, name, ...restField }) => (
+                              <Card key={key} size="small" style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 8 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                                  <Text strong>Sự kiện {name + 1}</Text>
+                                  <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red', fontSize: 18, cursor: 'pointer' }} />
+                                </div>
+                                <Row gutter={16} style={{ marginBottom: 12 }}>
+                                  <Col span={12}>
+                                    <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, message: 'Nhập tên sự kiện' }]} style={{ marginBottom: 0 }}>
+                                      <Input size="large" placeholder="Tên sự kiện (VD: Lương Về 10/08)" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={12}>
+                                    <Form.Item {...restField} name={[name, 'execute_time']} rules={[{ required: true, message: 'Chọn thời gian' }]} style={{ marginBottom: 0 }}>
+                                      <DatePicker showTime format="DD/MM/YYYY HH:mm" size="large" style={{ width: '100%' }} placeholder="Ngày/giờ kích hoạt" />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+                                {/* Điều kiện gửi (Audience Condition) */}
+                                <div style={{ marginBottom: 12 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                    <div style={{ width: 160, fontWeight: 500 }}>Điều kiện gửi:</div>
+                                    <Form.Item {...restField} name={[name, 'audience_condition', 'type']} initialValue="ALL" style={{ flex: 1, maxWidth: 400, marginBottom: 0 }}>
+                                      <Select size="large" placeholder="Chọn điều kiện">
+                                        <Select.Option value="ALL">Tất cả khách hàng</Select.Option>
+                                        <Select.Option value="NOT_PURCHASED_SINCE_EVENT">Khách chưa mua hàng kể từ sự kiện trước</Select.Option>
+                                        <Select.Option value="BABY_AGE_RANGE">Khách có con trong khoảng tuổi (tháng)</Select.Option>
+                                        <Select.Option value="NO_ORDER_THIS_MONTH">Khách chưa phát sinh đơn trong tháng</Select.Option>
+                                      </Select>
+                                    </Form.Item>
                                   </div>
-                                  <Row gutter={16} style={{ marginBottom: 12 }}>
-                                    <Col span={12}>
-                                      <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, message: 'Nhập tên sự kiện' }]} style={{ marginBottom: 0 }}>
-                                        <Input size="large" placeholder="Tên sự kiện (VD: Lương Về 10/08)" />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item {...restField} name={[name, 'execute_time']} rules={[{ required: true, message: 'Chọn thời gian' }]} style={{ marginBottom: 0 }}>
-                                        <DatePicker showTime format="DD/MM/YYYY HH:mm" size="large" style={{ width: '100%' }} placeholder="Ngày/giờ kích hoạt" />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
 
-                                  <div style={{ marginBottom: 12 }}>
-                                    <Form.Item {...restField} name={[name, 'exclude_converted']} valuePropName="checked" style={{ marginBottom: 0 }}>
-                                      <Checkbox style={{ fontWeight: 500 }}>Chỉ gửi cho khách chưa phát sinh đơn trong sự kiện trước (Exclude Converted)</Checkbox>
-                                    </Form.Item>
-                                  </div>
-                                  
-                                  <Divider style={{ margin: '12px 0' }} />
-                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                                    <div style={{ width: 160, fontWeight: 500 }}>Chọn Template:</div>
-                                    <Form.Item {...restField} name={[name, 'zns_template_id']} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: 'Chọn Template' }]}>
-                                      <Select
-                                        size="large"
-                                        placeholder="-- Chọn Template Zalo ZNS --"
-                                        showSearch
-                                        optionFilterProp="label"
-                                        options={templates.map(t => ({
-                                          value: t.template_id,
-                                          label: `${t.template_id} - ${t.name}`
-                                        }))}
-                                      />
-                                    </Form.Item>
-                                  </div>
-                                  
-                                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Nội dung Template tại mốc này:</Text>
-                                  
+                                  {/* Sub-fields based on condition type */}
                                   {(() => {
-                                    const sTemplateId = subEventsWatch[name]?.zns_template_id;
-                                    const sTemplate = templates.find(t => t.template_id === sTemplateId);
-                                    if (!sTemplate) return <Text type="secondary">Vui lòng chọn Template ZNS cho sự kiện này.</Text>;
-                                    if (!sTemplate.params || sTemplate.params.length === 0) return <Text type="secondary">Template này không có biến động nào.</Text>;
-                                    
-                                    return sTemplate.params.filter(p => p.type !== 'SYSTEM').map((param) => (
-                                      <div key={param.name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                        <div style={{ width: 200, fontWeight: 500 }}>
-                                          <code style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, fontSize: 13, color: '#111827' }}>{param.name}</code>
+                                    const condType = subEventsWatch[name]?.audience_condition?.type;
+
+                                    if (condType === 'NOT_PURCHASED_SINCE_EVENT') {
+                                      return (
+                                        <div style={{ display: 'flex', alignItems: 'center', marginTop: 8, paddingLeft: 160 }}>
+                                          <div style={{ width: 160, fontWeight: 500 }}>Kể từ sự kiện:</div>
+                                          <Form.Item {...restField} name={[name, 'audience_condition', 'since_event_index']} style={{ flex: 1, maxWidth: 300, marginBottom: 0 }}>
+                                            <Select size="large" placeholder="Chọn sự kiện tham chiếu">
+                                              {(subEventsWatch || []).map((ev, idx) => idx < name ? (
+                                                <Select.Option key={idx} value={idx}>Sự kiện {idx + 1}: {ev?.name || '(Chưa đặt tên)'}</Select.Option>
+                                              ) : null)}
+                                            </Select>
+                                          </Form.Item>
                                         </div>
-                                        <Form.Item {...restField} name={[name, 'dynamic_data', param.name]} style={{ flex: 1, marginBottom: 0 }}>
-                                          <Input size="large" placeholder={param.label ? `VD: ${param.label}` : `Nhập giá trị cho ${param.name}...`} />
-                                        </Form.Item>
-                                      </div>
-                                    ));
+                                      );
+                                    }
+
+                                    if (condType === 'BABY_AGE_RANGE') {
+                                      return (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, paddingLeft: 160 }}>
+                                          <div style={{ fontWeight: 500 }}>Từ:</div>
+                                          <Form.Item {...restField} name={[name, 'audience_condition', 'baby_age_min']} style={{ marginBottom: 0 }}>
+                                            <InputNumber size="large" min={0} placeholder="0" style={{ width: 100 }} />
+                                          </Form.Item>
+                                          <div style={{ fontWeight: 500 }}>đến:</div>
+                                          <Form.Item {...restField} name={[name, 'audience_condition', 'baby_age_max']} style={{ marginBottom: 0 }}>
+                                            <InputNumber size="large" min={1} placeholder="24" style={{ width: 100 }} />
+                                          </Form.Item>
+                                          <Text type="secondary">tháng tuổi</Text>
+                                        </div>
+                                      );
+                                    }
+
+                                    return null;
                                   })()}
-                                </Card>
-                              ))}
-                              <Button type="dashed" onClick={() => add({})} block icon={<PlusOutlined />} style={{ height: 40 }}>
-                                Thêm sự kiện con
-                              </Button>
-                            </div>
-                          )}
-                        </Form.List>
+                                </div>
+
+                                <Divider style={{ margin: '12px 0' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+                                  <div style={{ width: 160, fontWeight: 500 }}>Chọn Template:</div>
+                                  <Form.Item {...restField} name={[name, 'zns_template_id']} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: 'Chọn Template' }]}>
+                                    <Select
+                                      size="large"
+                                      placeholder="-- Chọn Template Zalo ZNS --"
+                                      showSearch
+                                      optionFilterProp="label"
+                                      options={templates.map(t => ({
+                                        value: t.template_id,
+                                        label: `${t.template_id} - ${t.name}`
+                                      }))}
+                                    />
+                                  </Form.Item>
+                                </div>
+
+                                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Nội dung Template tại mốc này:</Text>
+
+                                {(() => {
+                                  const sTemplateId = subEventsWatch[name]?.zns_template_id;
+                                  const sTemplate = templates.find(t => t.template_id === sTemplateId);
+                                  if (!sTemplate) return <Text type="secondary">Vui lòng chọn Template ZNS cho sự kiện này.</Text>;
+                                  if (!sTemplate.params || sTemplate.params.length === 0) return <Text type="secondary">Template này không có biến động nào.</Text>;
+
+                                  return sTemplate.params.filter(p => p.type !== 'SYSTEM').map((param) => (
+                                    <div key={param.name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                      <div style={{ width: 200, fontWeight: 500 }}>
+                                        <code style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, fontSize: 13, color: '#111827' }}>{param.name}</code>
+                                      </div>
+                                      <Form.Item {...restField} name={[name, 'dynamic_data', param.name]} style={{ flex: 1, marginBottom: 0 }}>
+                                        <Input size="large" placeholder={param.label ? `VD: ${param.label}` : `Nhập giá trị cho ${param.name}...`} />
+                                      </Form.Item>
+                                    </div>
+                                  ));
+                                })()}
+                              </Card>
+                            ))}
+                            <Button type="dashed" onClick={() => add({})} block icon={<PlusOutlined />} style={{ height: 40 }}>
+                              Thêm sự kiện con
+                            </Button>
+                          </div>
+                        )}
+                      </Form.List>
                     </div>
                   ) : (
                     <div>
@@ -724,84 +846,6 @@ export default function CreateCampaignPage() {
                       )}
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* 5. PREVIEW */}
-          <Card
-            title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'MASTER_CAMPAIGN' ? '4' : '5'}. Preview nội dung tin nhắn</span>}
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-          >
-            <Text style={{ marginBottom: 16, display: 'block' }}>Xem trước giao diện tin nhắn ZNS gửi tới khách hàng:</Text>
-
-            <div style={{ padding: 24, display: 'flex', justifyContent: 'center', background: '#f3f4f6', borderRadius: 8 }}>
-              <div style={{
-                width: 340,
-                background: 'white',
-                borderRadius: 24,
-                border: '8px solid #111827',
-                overflow: 'hidden',
-                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
-              }}>
-                <div style={{ background: '#f3f4f6', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <MobileOutlined />
-                  <Text strong>Zalo Official Account</Text>
-                </div>
-                <div style={{ padding: 16 }}>
-                  {(() => {
-                    const previewTemplateId = campaignType === 'LIFECYCLE' 
-                      ? milestonesWatch[0]?.zns_template_id 
-                      : campaignType === 'MASTER_CAMPAIGN'
-                      ? subEventsWatch[0]?.zns_template_id
-                      : templateId;
-                    const previewTemplate = templates.find(t => t.template_id === previewTemplateId);
-
-                    if (previewTemplate) {
-                      return (
-                        <div style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6 }}>
-                          {(() => {
-                            let previewContent = previewTemplate.content || 'Không có nội dung mẫu';
-                            // Replace SYSTEM vars with sample values
-                            previewContent = previewContent.replace(/<customer_name>|\{customer_name\}/g, '[Tên Khách Hàng]');
-                            previewContent = previewContent.replace(/<phone>|\{phone\}/g, '[SĐT]');
-                            previewContent = previewContent.replace(/<product_name>|\{product_name\}/g, '[Tên SP]');
-                            previewContent = previewContent.replace(/<refill_date>|\{refill_date\}/g, '[Ngày hết]');
-                            previewContent = previewContent.replace(/<baby_name>|\{baby_name\}/g, '[Tên bé]');
-                            
-                            // Replace CUSTOM vars
-                              if (previewTemplate.params) {
-                              previewTemplate.params.forEach(p => {
-                                let val;
-                                if (campaignType === 'LIFECYCLE') {
-                                  val = milestonesWatch[0]?.dynamic_data?.[p.name];
-                                } else if (campaignType === 'MASTER_CAMPAIGN') {
-                                  val = subEventsWatch[0]?.dynamic_data?.[p.name];
-                                } else {
-                                  val = form.getFieldValue(['dynamic_data', p.name]);
-                                }
-                                
-                                if (val) {
-                                  previewContent = previewContent.replace(new RegExp(`<${p.name}>|\\{${p.name}\\}`, 'g'), val);
-                                } else if (p.type !== 'SYSTEM') {
-                                  previewContent = previewContent.replace(new RegExp(`<${p.name}>|\\{${p.name}\\}`, 'g'), `[${p.label || p.name}]`);
-                                }
-                              });
-                            }
-                            return previewContent;
-                          })()}
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: 20 }}>
-                          {campaignType === 'LIFECYCLE' ? 'Chọn Template ở mốc 1 để xem Preview' : campaignType === 'MASTER_CAMPAIGN' ? 'Chọn Template ở sự kiện 1 để xem Preview' : 'Chọn Template ZNS để xem Preview'}
-                        </Text>
-                      );
-                    }
-                  })()}
                 </div>
               </div>
             </div>
