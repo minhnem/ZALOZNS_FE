@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Space, Popconfirm, Card, Typography } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, Popconfirm, Card, Typography, App } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import zaloZnsApi from '../apis/zaloZnsApi'; // adjust path
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../utils/hasPermission';
 
 const { Title } = Typography;
 const { Option } = Select;
 
 const LifecycleMilestones = () => {
+  const { user } = useSelector((state) => state.auth);
+  const { message: messageApi } = App.useApp();
   const [config, setConfig] = useState(null);
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +26,7 @@ const LifecycleMilestones = () => {
       setConfig(data);
       setMilestones(data.scriptMilestones || []);
     } catch (error) {
-      message.error("Lỗi khi tải dữ liệu cấu hình ZNS");
+      messageApi.error("Lỗi khi tải dữ liệu cấu hình ZNS");
       console.error(error);
     } finally {
       setLoading(false);
@@ -38,16 +42,16 @@ const LifecycleMilestones = () => {
     try {
       if (editingId) {
         await zaloZnsApi.editMilestone(editingId, values);
-        message.success("Cập nhật kịch bản thành công!");
+        messageApi.success("Cập nhật kịch bản thành công!");
       } else {
         await zaloZnsApi.addMilestone(values);
-        message.success("Thêm mới kịch bản thành công!");
+        messageApi.success("Thêm mới kịch bản thành công!");
       }
       setIsModalVisible(false);
       form.resetFields();
       fetchData(); // Reload table
     } catch (error) {
-      message.error(error.message || "Có lỗi xảy ra, vui lòng thử lại!");
+      messageApi.error(error.message || "Có lỗi xảy ra, vui lòng thử lại!");
     }
   };
 
@@ -55,10 +59,10 @@ const LifecycleMilestones = () => {
   const handleDelete = async (id) => {
     try {
       await zaloZnsApi.deleteMilestone(id);
-      message.success("Xóa kịch bản thành công!");
+      messageApi.success("Xóa kịch bản thành công!");
       fetchData();
     } catch (error) {
-      message.error("Lỗi khi xóa kịch bản!");
+      messageApi.error("Lỗi khi xóa kịch bản!");
     }
   };
 
@@ -124,16 +128,26 @@ const LifecycleMilestones = () => {
             type="primary" 
             icon={<EditOutlined />} 
             size="small" 
-            onClick={() => handleEdit(record)} 
+            onClick={() => {
+              if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa kịch bản!');
+              handleEdit(record);
+            }} 
           />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa kịch bản này?"
-            onConfirm={() => handleDelete(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button type="primary" danger icon={<DeleteOutlined />} size="small" />
-          </Popconfirm>
+          {hasPermission(user, 'campaign_delete') ? (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa kịch bản này?"
+              onConfirm={() => handleDelete(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button type="primary" danger icon={<DeleteOutlined />} size="small" />
+            </Popconfirm>
+          ) : (
+            <Button type="primary" danger icon={<DeleteOutlined />} size="small" onClick={(e) => {
+              e.stopPropagation();
+              messageApi.warning('Bạn không có quyền xóa kịch bản!');
+            }}/>
+          )}
         </Space>
       ),
     },
@@ -144,7 +158,10 @@ const LifecycleMilestones = () => {
       <Card bordered={false} className="shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <Title level={4} style={{ margin: 0 }}>Quản lý Kịch bản Zalo ZNS</Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} size="large" className="bg-blue-600">
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            if (!hasPermission(user, 'campaign_create')) return messageApi.warning('Bạn không có quyền thêm kịch bản mới!');
+            handleAdd();
+          }} size="large" className="bg-blue-600">
             Thêm Kịch Bản Mới
           </Button>
         </div>

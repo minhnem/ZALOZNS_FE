@@ -14,7 +14,7 @@ import {
   Tooltip,
   Badge,
   Spin,
-  message
+  App
 } from 'antd';
 import {
   TeamOutlined,
@@ -34,6 +34,8 @@ import {
 } from '@ant-design/icons';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
 
 const { Title, Text } = Typography;
 
@@ -193,6 +195,8 @@ const MiniSparkline = ({ color = '#0d6e57', trend = 'up' }) => {
 
 // ─── Main Dashboard Component ───────────────────────────────────────────────
 export default function DashboardPage() {
+  const { user } = useSelector((state) => state.auth);
+  const { message: messageApi } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -253,7 +257,7 @@ export default function DashboardPage() {
       }, 500);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
-      message.error('Không thể tải dữ liệu dashboard');
+      messageApi.error('Không thể tải dữ liệu dashboard');
       setLoading(false);
     }
   };
@@ -419,10 +423,14 @@ export default function DashboardPage() {
       render: () => (
         <Space size="small">
           <Tooltip title="Chỉnh sửa">
-            <Button type="text" size="small" icon={<EditOutlined />} />
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={() => {
+              if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu khách hàng!');
+            }}/>
           </Tooltip>
           <Tooltip title="Xóa">
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => {
+              if (!hasPermission(user, 'data_delete')) return messageApi.warning('Bạn không có quyền xóa dữ liệu khách hàng!');
+            }}/>
           </Tooltip>
         </Space>
       )

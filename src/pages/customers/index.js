@@ -35,11 +35,16 @@ import { FaUsers, FaBoxOpen, FaExclamationTriangle } from 'react-icons/fa';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
 import dayjs from 'dayjs';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
 
 const { Title, Text } = Typography;
 
+import { App } from 'antd';
+
 export default function CustomersPage() {
-  const [messageApi, contextHolder] = message.useMessage();
+  const { user } = useSelector((state) => state.auth);
+  const { message: messageApi } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -135,7 +140,8 @@ export default function CustomersPage() {
       if (selectedCustomer) fetchCustomerOrders(selectedCustomer._id);
       fetchCustomers();
     } catch (error) {
-      messageApi.error(error.message || 'Lỗi khi xóa đơn hàng');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi xóa đơn hàng');
+      messageApi.error(msg);
     }
   };
 
@@ -160,7 +166,8 @@ export default function CustomersPage() {
       if (selectedCustomer) fetchCustomerOrders(selectedCustomer._id);
       fetchCustomers();
     } catch (error) {
-      messageApi.error(error.message || 'Lỗi khi cập nhật đơn hàng');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi cập nhật đơn hàng');
+      messageApi.error(msg);
     }
   };
 
@@ -187,7 +194,8 @@ export default function CustomersPage() {
       messageApi.success('Xóa khách hàng thành công!');
       fetchCustomers();
     } catch (error) {
-      messageApi.error(error.message || 'Lỗi khi xóa khách hàng');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi xóa khách hàng');
+      messageApi.error(msg);
     }
   };
 
@@ -258,15 +266,43 @@ export default function CustomersPage() {
       render: (_, record) => (
         <Space direction="vertical" size="small">
           <Button type="text" size="small" icon={<EyeOutlined />} style={{ color: '#0ea5e9' }} onClick={() => handleOpenDetails(record)}>Chi tiết</Button>
-          <Button type="text" size="small" icon={<EditOutlined />} style={{ color: '#d97706' }} onClick={() => handleOpenEdit(record)}>Sửa SĐT</Button>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa khách hàng này?"
-            onConfirm={() => handleDeleteCustomer(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
+          <Button 
+            type="text" 
+            size="small" 
+            icon={<EditOutlined />} 
+            style={{ color: '#d97706' }} 
+            onClick={() => {
+              if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
+              handleOpenEdit(record);
+            }}
           >
-            <Button type="text" size="small" icon={<DeleteOutlined />} danger>Xóa</Button>
-          </Popconfirm>
+            Sửa SĐT
+          </Button>
+          {hasPermission(user, 'data_delete') ? (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa khách hàng này?"
+              onConfirm={() => handleDeleteCustomer(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button type="text" size="small" icon={<DeleteOutlined />} danger>
+                Xóa
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Button 
+              type="text" 
+              size="small" 
+              icon={<DeleteOutlined />} 
+              danger
+              onClick={(e) => {
+                e.stopPropagation();
+                messageApi.warning('Bạn không có quyền xóa dữ liệu!');
+              }}
+            >
+              Xóa
+            </Button>
+          )}
         </Space>
       )
     }
@@ -274,7 +310,6 @@ export default function CustomersPage() {
 
   return (
     <DashboardLayout title="Quản lý Khách hàng">
-      {contextHolder}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
         
         {/* HEADER */}
@@ -289,8 +324,25 @@ export default function CustomersPage() {
             </div>
           </div>
           <Space>
-            <Button icon={<ImportOutlined />} size="large">Import Đơn</Button>
-            <Button type="primary" icon={<PlusOutlined />} size="large" style={{ background: '#0d6e57' }} onClick={() => setIsModalVisible(true)}>
+            <Button 
+              icon={<ImportOutlined />} 
+              size="large"
+              onClick={() => {
+                if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
+              }}
+            >
+              Import Đơn
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              size="large" 
+              style={{ background: '#0d6e57' }} 
+              onClick={() => {
+                if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
+                setIsModalVisible(true);
+              }}
+            >
               Thêm Khách Hàng
             </Button>
           </Space>
@@ -481,6 +533,14 @@ export default function CustomersPage() {
         width={800}
         destroyOnClose
       >
+        <div style={{ marginBottom: 16, background: '#f9fafb', padding: 12, borderRadius: 8 }}>
+          <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+            Tạo bởi: <Text strong>{selectedCustomer?.created_by?.fullName || 'Hệ thống'}</Text> - {selectedCustomer?.createdAt ? new Date(selectedCustomer.createdAt).toLocaleDateString('vi-VN') : ''}
+          </Text>
+          <Text type="secondary">
+            Cập nhật lần cuối: <Text strong>{selectedCustomer?.updated_by?.fullName || 'Hệ thống'}</Text> - {selectedCustomer?.updatedAt ? new Date(selectedCustomer.updatedAt).toLocaleDateString('vi-VN') : ''}
+          </Text>
+        </div>
         <div style={{ marginBottom: 16 }}>
           <Text strong>Danh sách sản phẩm đã mua & Lịch nhắc nhở (ZNS)</Text>
         </div>
@@ -511,15 +571,41 @@ export default function CustomersPage() {
               key: 'action',
               render: (_, record) => (
                 <Space>
-                  <Button type="text" style={{ color: '#d97706' }} icon={<EditOutlined />} onClick={() => handleOpenEditOrder(record)}>Sửa</Button>
-                  <Popconfirm
-                    title="Xóa đơn hàng này sẽ hủy lịch gửi ZNS nhắc nhở tương ứng. Bạn chắc chứ?"
-                    onConfirm={() => handleDeleteOrder(record._id)}
-                    okText="Xóa Đơn"
-                    cancelText="Hủy"
+                  <Button 
+                    type="text" 
+                    style={{ color: '#d97706' }} 
+                    icon={<EditOutlined />} 
+                    onClick={() => {
+                      if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
+                      handleOpenEditOrder(record);
+                    }}
                   >
-                    <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
-                  </Popconfirm>
+                    Sửa
+                  </Button>
+                  {hasPermission(user, 'data_delete') ? (
+                    <Popconfirm
+                      title="Xóa đơn hàng này sẽ hủy lịch gửi ZNS nhắc nhở tương ứng. Bạn chắc chứ?"
+                      onConfirm={() => handleDeleteOrder(record._id)}
+                      okText="Xóa Đơn"
+                      cancelText="Hủy"
+                    >
+                      <Button type="text" danger icon={<DeleteOutlined />}>
+                        Xóa
+                      </Button>
+                    </Popconfirm>
+                  ) : (
+                    <Button 
+                      type="text" 
+                      danger 
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        messageApi.warning('Bạn không có quyền xóa dữ liệu!');
+                      }}
+                    >
+                      Xóa
+                    </Button>
+                  )}
                 </Space>
               )
             }
@@ -527,6 +613,7 @@ export default function CustomersPage() {
         />
         <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
           <Button type="primary" style={{ background: '#0d6e57' }} onClick={() => {
+              if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
               setIsDetailsModalVisible(false);
               form.setFieldsValue({ phone: selectedCustomer?.phone });
               setIsModalVisible(true);

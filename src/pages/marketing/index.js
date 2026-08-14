@@ -10,9 +10,9 @@ import {
   Tag, 
   Space, 
   Tooltip,
-  message,
   Popconfirm,
-  Tabs
+  Tabs,
+  App
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -23,15 +23,20 @@ import {
   RocketOutlined 
 } from '@ant-design/icons';
 import { useRouter } from 'next/router';
+import { useSelector } from 'react-redux';
 import handleAPI from '../../apis/handleAPI';
+import { hasPermission } from '../../utils/hasPermission';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import LifecycleMilestones from '../../components/LifecycleMilestones';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function MarketingPage() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
+  const { message: messageApi } = App.useApp();
+
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -49,7 +54,7 @@ export default function MarketingPage() {
       setCampaigns(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
       console.error(error);
-      message.error('Lấy danh sách chiến dịch thất bại');
+      messageApi.error('Lấy danh sách chiến dịch thất bại');
     } finally {
       setLoading(false);
     }
@@ -69,10 +74,10 @@ export default function MarketingPage() {
   const handleDelete = async (id) => {
     try {
       await handleAPI(`/api/campaigns/${id}`, null, 'delete');
-      message.success('Đã xóa chiến dịch!');
+      messageApi.success('Đã xóa chiến dịch!');
       fetchCampaigns();
     } catch (error) {
-      message.error('Lỗi khi xóa chiến dịch');
+      messageApi.error('Lỗi khi xóa chiến dịch');
     }
   };
 
@@ -119,6 +124,16 @@ export default function MarketingPage() {
       }
     },
     {
+      title: 'Người tạo / Cập nhật',
+      key: 'audit',
+      render: (_, record) => (
+        <div style={{ fontSize: 12 }}>
+          <div style={{ marginBottom: 4 }}><Text type="secondary">Tạo:</Text> <Text strong>{record.created_by?.fullName || 'Hệ thống'}</Text></div>
+          <div><Text type="secondary">Sửa:</Text> <Text strong>{record.updated_by?.fullName || 'Hệ thống'}</Text></div>
+        </div>
+      )
+    },
+    {
       title: 'Trạng thái',
       key: 'status',
       dataIndex: 'status',
@@ -159,16 +174,31 @@ export default function MarketingPage() {
             <Button type="text" style={{ color: '#0ea5e9' }} icon={<EyeOutlined />} onClick={() => router.push(`/marketing/create?view=${record._id}`)} />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
-            <Button type="text" icon={<EditOutlined />} onClick={() => router.push(`/marketing/create?edit=${record._id}`)} />
+            <Button type="text" icon={<EditOutlined />} onClick={() => {
+              if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
+              router.push(`/marketing/create?edit=${record._id}`);
+            }} />
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc muốn xóa chiến dịch này?"
-            onConfirm={() => handleDelete(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {hasPermission(user, 'campaign_delete') ? (
+            <Popconfirm
+              title="Bạn có chắc muốn xóa chiến dịch này?"
+              onConfirm={() => handleDelete(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          ) : (
+            <Button 
+              type="text" 
+              danger 
+              icon={<DeleteOutlined />} 
+              onClick={(e) => {
+                e.stopPropagation();
+                messageApi.warning('Bạn không có quyền xóa chiến dịch!');
+              }}
+            />
+          )}
         </Space>
       ),
     },
@@ -186,7 +216,10 @@ export default function MarketingPage() {
             icon={<PlusOutlined />} 
             size="large" 
             style={{ fontWeight: 600, borderRadius: 8 }}
-            onClick={() => router.push('/marketing/create')}
+            onClick={() => {
+              if (!hasPermission(user, 'campaign_create')) return messageApi.warning('Bạn không có quyền tạo chiến dịch!');
+              router.push('/marketing/create');
+            }}
           >
             Tạo Chiến Dịch Mới
           </Button>

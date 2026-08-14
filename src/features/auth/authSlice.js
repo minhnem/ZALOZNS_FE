@@ -39,6 +39,15 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   authService.logout();
 });
 
+// Lấy thông tin người dùng hiện tại (Get Me)
+export const getMe = createAsyncThunk('auth/getMe', async (_, thunkAPI) => {
+  try {
+    return await authService.getMe();
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error);
+  }
+});
+
 export const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -93,6 +102,15 @@ export const authSlice = createSlice({
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.token = null;
+      })
+      .addCase(getMe.fulfilled, (state, action) => {
+        state.user = action.payload; // Update user object with latest permissions
+      })
+      .addCase(getMe.rejected, (state, action) => {
+        // Nếu fetch getMe lỗi (ví dụ token hết hạn), có thể logout luôn
+        // authService.logout();
+        // state.user = null;
+        // state.token = null;
       });
   },
 });

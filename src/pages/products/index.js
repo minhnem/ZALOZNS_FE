@@ -11,8 +11,8 @@ import {
   Form,
   InputNumber,
   Select,
-  message,
-  Popconfirm
+  Popconfirm,
+  App
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -22,10 +22,14 @@ import {
 } from '@ant-design/icons';
 import handleAPI from '../../apis/handleAPI';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
 
 const { Title, Text } = Typography;
 
 export default function ProductsPage() {
+  const { user } = useSelector((state) => state.auth);
+  const { message: messageApi } = App.useApp();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -45,7 +49,7 @@ export default function ProductsPage() {
       setProducts(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
       console.error(error);
-      message.error('Lấy dữ liệu sản phẩm thất bại');
+      messageApi.error('Lấy dữ liệu sản phẩm thất bại');
     } finally {
       setLoading(false);
     }
@@ -77,26 +81,28 @@ export default function ProductsPage() {
     try {
       if (editingProduct) {
         await handleAPI(`/api/products/${editingProduct._id}`, values, 'put');
-        message.success('Đã cập nhật sản phẩm thành công!');
+        messageApi.success('Đã cập nhật sản phẩm thành công!');
       } else {
         await handleAPI('/api/products', values, 'post');
-        message.success('Đã thêm sản phẩm mới thành công!');
+        messageApi.success('Đã thêm sản phẩm mới thành công!');
       }
       handleCloseModal();
       fetchProducts();
     } catch (error) {
       console.error(error);
-      message.error(error || 'Có lỗi xảy ra');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Có lỗi xảy ra');
+      messageApi.error(msg);
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await handleAPI(`/api/products/${id}`, null, 'delete');
-      message.success('Đã xóa sản phẩm!');
+      messageApi.success('Đã xóa sản phẩm!');
       fetchProducts();
     } catch (error) {
-      message.error('Lỗi khi xóa sản phẩm');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi xóa sản phẩm');
+      messageApi.error(msg);
     }
   };
 
@@ -153,19 +159,34 @@ export default function ProductsPage() {
           <Button 
             type="text" 
             icon={<EditOutlined />} 
-            onClick={() => handleOpenModal(record)}
+            onClick={() => {
+              if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
+              handleOpenModal(record);
+            }}
             style={{ color: '#0d6e57' }}
           >
             Sửa chu kỳ
           </Button>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa sản phẩm này?"
-            onConfirm={() => handleDelete(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {hasPermission(user, 'data_delete') ? (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa sản phẩm này?"
+              onConfirm={() => handleDelete(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          ) : (
+            <Button 
+              type="text" 
+              danger 
+              icon={<DeleteOutlined />} 
+              onClick={(e) => {
+                e.stopPropagation();
+                messageApi.warning('Bạn không có quyền xóa dữ liệu!');
+              }}
+            />
+          )}
         </Space>
       ),
     },
@@ -183,7 +204,10 @@ export default function ProductsPage() {
           icon={<PlusOutlined />} 
           size="large"
           style={{ background: '#0d6e57' }}
-          onClick={() => handleOpenModal()}
+          onClick={() => {
+            if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
+            handleOpenModal();
+          }}
         >
           Thêm Sản phẩm
         </Button>

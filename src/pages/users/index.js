@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, message, Popconfirm, AutoComplete, Upload } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, Popconfirm, AutoComplete, Upload, App } from 'antd';
 import handleAPI from '../../apis/handleAPI';
 import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, ImportOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
 
 const { Title } = Typography;
 
 // Dữ liệu sẽ được fetch từ API
 
 const UsersPage = () => {
+  const { user } = useSelector((state) => state.auth);
+  const { message: messageApi } = App.useApp();
   const [data, setData] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -46,14 +50,14 @@ const UsersPage = () => {
         const res = await handleAPI('/api/customers/import', formData, 'post', {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        message.success(`Import thành công! Đã xử lý: ${res?.data?.totalRowsProcessed || 0} dòng. Khách mới: ${res?.data?.newCustomers || 0}, Đơn mới: ${res?.data?.newOrders || 0}.`);
+        messageApi.success(`Import thành công! Đã xử lý: ${res?.data?.totalRowsProcessed || 0} dòng. Khách mới: ${res?.data?.newCustomers || 0}, Đơn mới: ${res?.data?.newOrders || 0}.`);
         onSuccess(res, file);
         setIsImportModalVisible(false);
         fetchCustomers();
       } catch (error) {
         console.error(error);
         const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi import dữ liệu');
-        message.error(msg);
+        messageApi.error(msg);
         onError(error);
       } finally {
         setImportLoading(false);
@@ -82,7 +86,7 @@ const UsersPage = () => {
       setData(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
       console.log(error);
-      message.error('Lấy dữ liệu thất bại');
+      messageApi.error('Lấy dữ liệu thất bại');
     } finally {
       setLoading(false);
     }
@@ -135,10 +139,11 @@ const UsersPage = () => {
   const handleDelete = async (id) => {
     try {
       await handleAPI(`/api/customers/${id}`, null, 'delete');
-      message.success('Xóa dữ liệu thành công!');
+      messageApi.success('Xóa dữ liệu thành công!');
       fetchCustomers();
     } catch (error) {
-      message.error('Lỗi khi xóa dữ liệu');
+      const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi xóa dữ liệu');
+      messageApi.error(msg);
     }
   };
 
@@ -200,10 +205,10 @@ const UsersPage = () => {
 
       if (editingId) {
         await handleAPI(`/api/customers/${editingId}`, payload, 'put');
-        message.success('Cập nhật dữ liệu thành công!');
+        messageApi.success('Cập nhật dữ liệu thành công!');
       } else {
         await handleAPI('/api/customers', payload, 'post');
-        message.success('Thêm dữ liệu thành công!');
+        messageApi.success('Thêm dữ liệu thành công!');
       }
 
       setIsModalVisible(false);
@@ -213,7 +218,7 @@ const UsersPage = () => {
       fetchCustomers();
     } catch (error) {
       console.log(error);
-      message.error(error?.message || 'Có lỗi xảy ra');
+      messageApi.error(error?.message || 'Có lỗi xảy ra');
     } finally {
       setSubmitLoading(false);
     }
@@ -322,16 +327,31 @@ const UsersPage = () => {
             type="text"
             icon={<EditOutlined />}
             className="text-blue-500"
-            onClick={() => handleEdit(record)}
+            onClick={() => {
+              if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
+              handleEdit(record);
+            }}
           />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa khách hàng này?"
-            onConfirm={() => handleDelete(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {hasPermission(user, 'data_delete') ? (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa khách hàng này?"
+              onConfirm={() => handleDelete(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          ) : (
+            <Button 
+              type="text" 
+              danger 
+              icon={<DeleteOutlined />} 
+              onClick={(e) => {
+                e.stopPropagation();
+                messageApi.warning('Bạn không có quyền xóa dữ liệu!');
+              }}
+            />
+          )}
         </Space>
       ),
     },
@@ -343,10 +363,16 @@ const UsersPage = () => {
         <div className="flex justify-between items-center mb-6">
           <Title level={4} style={{ margin: 0 }}>Quản lý dữ liệu tiềm năng</Title>
           <Space>
-            <Button icon={<ImportOutlined />} size="large" onClick={() => setIsImportModalVisible(true)}>
+            <Button icon={<ImportOutlined />} size="large" onClick={() => {
+              if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
+              setIsImportModalVisible(true);
+            }}>
               Nhập từ Excel
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={showModal} size="large" style={{ backgroundColor: '#0d6e57', borderColor: '#0d6e57' }}>
+            <Button type="primary" icon={<PlusOutlined />} size="large" style={{ backgroundColor: '#0d6e57', borderColor: '#0d6e57' }} onClick={() => {
+              if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
+              showModal();
+            }}>
               Thêm dữ liệu
             </Button>
           </Space>

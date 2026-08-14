@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Typography, Card, Button, Table, Tag, Space, Input, Modal, message, 
-  Form, Select, InputNumber, Divider, Popconfirm, Tooltip, Row, Col
+  Typography, Card, Button, Table, Tag, Space, Input, Modal, 
+  Form, Select, InputNumber, Divider, Popconfirm, Tooltip, Row, Col, App
 } from 'antd';
 import { 
   SyncOutlined, SearchOutlined, EyeOutlined, PlusOutlined, 
@@ -9,6 +9,9 @@ import {
 } from '@ant-design/icons';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
+import { useRouter } from 'next/router';
 
 const { Title, Text } = Typography;
 
@@ -57,7 +60,7 @@ function ParamConfigSection({ form }) {
       ...detected.filter(d => !existingNames.includes(d.name))
     ];
     form.setFieldsValue({ params: merged });
-    message.success(`Đã phát hiện ${detected.length} biến, thêm ${merged.length - existing.length} biến mới.`);
+    messageApi.success(`Đã phát hiện ${detected.length} biến, thêm ${merged.length - existing.length} biến mới.`);
   };
 
   return (
@@ -129,11 +132,15 @@ function ParamConfigSection({ form }) {
 }
 
 export default function ZnsTemplatesPage() {
+  const { user } = useSelector((state) => state.auth);
+  const { message: messageApi } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
   const [templates, setTemplates] = useState([]);
+  
+  const router = useRouter();
 
   // Modal states
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
@@ -147,8 +154,14 @@ export default function ZnsTemplatesPage() {
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
+    if (!user) return; // Do nothing if logging out
+    if (!hasPermission(user, 'zns_view')) {
+      messageApi.warning('Bạn không có quyền xem mẫu ZNS!');
+      router.replace('/dashboard');
+      return;
+    }
     fetchTemplates();
-  }, []);
+  }, [user, router, messageApi]);
 
   const fetchTemplates = async () => {
     try {
@@ -162,7 +175,7 @@ export default function ZnsTemplatesPage() {
       const res = await handleAPI(url, null, 'get');
       setTemplates(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
-      message.error('Lấy danh sách template thất bại');
+      messageApi.error('Lấy danh sách template thất bại');
     } finally {
       setLoading(false);
     }
@@ -172,10 +185,10 @@ export default function ZnsTemplatesPage() {
     try {
       setSyncLoading(true);
       const res = await handleAPI('/api/zns-templates/sync', null, 'post');
-      message.success(res.message || 'Đồng bộ thành công!');
+      messageApi.success(res.message || 'Đồng bộ thành công!');
       fetchTemplates();
     } catch (error) {
-      message.error(error.message || 'Lỗi đồng bộ từ Zalo OA');
+      messageApi.error(error.message || 'Lỗi đồng bộ từ Zalo OA');
     } finally {
       setSyncLoading(false);
     }
@@ -189,12 +202,12 @@ export default function ZnsTemplatesPage() {
   const handleAddTemplate = async (values) => {
     try {
       await handleAPI('/api/zns-templates', values, 'post');
-      message.success('Thêm template thành công!');
+      messageApi.success('Thêm template thành công!');
       setIsAddModalVisible(false);
       addForm.resetFields();
       fetchTemplates();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi thêm template');
+      messageApi.error(error.message || 'Lỗi khi thêm template');
     }
   };
 
@@ -215,22 +228,22 @@ export default function ZnsTemplatesPage() {
   const handleEditTemplate = async (values) => {
     try {
       await handleAPI(`/api/zns-templates/${editingId}`, values, 'put');
-      message.success('Cập nhật template thành công!');
+      messageApi.success('Cập nhật template thành công!');
       setIsEditModalVisible(false);
       editForm.resetFields();
       fetchTemplates();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi cập nhật template');
+      messageApi.error(error.message || 'Lỗi khi cập nhật template');
     }
   };
 
   const handleDeleteTemplate = async (id) => {
     try {
       await handleAPI(`/api/zns-templates/${id}`, null, 'delete');
-      message.success('Xóa template thành công!');
+      messageApi.success('Xóa template thành công!');
       fetchTemplates();
     } catch (error) {
-      message.error(error.message || 'Lỗi khi xóa template');
+      messageApi.error(error.message || 'Lỗi khi xóa template');
     }
   };
 
@@ -307,11 +320,21 @@ export default function ZnsTemplatesPage() {
             <Button type="primary" ghost icon={<EyeOutlined />} size="small" onClick={() => handleView(record)}>Xem</Button>
           </Tooltip>
           <Tooltip title="Sửa template">
-            <Button type="text" icon={<EditOutlined />} size="small" style={{ color: '#d97706' }} onClick={() => handleOpenEdit(record)}>Sửa</Button>
+            <Button type="text" icon={<EditOutlined />} size="small" style={{ color: '#d97706' }} onClick={() => {
+              if (!hasPermission(user, 'zns_edit')) return messageApi.warning('Bạn không có quyền sửa template!');
+              handleOpenEdit(record);
+            }}>Sửa</Button>
           </Tooltip>
-          <Popconfirm title="Bạn có chắc chắn muốn xóa?" onConfirm={() => handleDeleteTemplate(record._id)} okText="Xóa" cancelText="Hủy">
-            <Button type="text" icon={<DeleteOutlined />} size="small" danger>Xóa</Button>
-          </Popconfirm>
+          {hasPermission(user, 'zns_delete') ? (
+            <Popconfirm title="Bạn có chắc chắn muốn xóa?" onConfirm={() => handleDeleteTemplate(record._id)} okText="Xóa" cancelText="Hủy">
+              <Button type="text" icon={<DeleteOutlined />} size="small" danger>Xóa</Button>
+            </Popconfirm>
+          ) : (
+            <Button type="text" icon={<DeleteOutlined />} size="small" danger onClick={(e) => {
+              e.stopPropagation();
+              messageApi.warning('Bạn không có quyền xóa template!');
+            }}>Xóa</Button>
+          )}
         </Space>
       )
     }
@@ -376,10 +399,17 @@ export default function ZnsTemplatesPage() {
             <Text type="secondary">Đồng bộ và quản lý các mẫu tin nhắn từ Zalo OA</Text>
           </div>
           <Space>
-            <Button icon={<PlusOutlined />} size="large" onClick={() => setIsAddModalVisible(true)}>Thêm Template</Button>
+            <Button icon={<PlusOutlined />} size="large" onClick={() => {
+              if (!hasPermission(user, 'zns_create')) return messageApi.warning('Bạn không có quyền thêm mới template!');
+              setIsAddModalVisible(true);
+            }}>Thêm Template</Button>
             <Button 
               type="primary" icon={<SyncOutlined spin={syncLoading} />} 
-              onClick={handleSync} loading={syncLoading} size="large"
+              onClick={() => {
+                if (!hasPermission(user, 'zns_create') && !hasPermission(user, 'zns_edit')) return messageApi.warning('Bạn không có quyền đồng bộ template!');
+                handleSync();
+              }} 
+              loading={syncLoading} size="large"
               style={{ background: '#0d6e57', borderColor: '#0d6e57' }}
             >
               Đồng bộ từ Zalo OA

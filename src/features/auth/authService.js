@@ -30,10 +30,23 @@ const logout = () => {
   localStorage.removeItem('user');
 };
 
+// Get current user (getMe)
+const getMe = async () => {
+  const response = await axiosClient.get(`${API_URL}/me`);
+  if (response?.user) {
+    const oldUser = JSON.parse(localStorage.getItem('user')) || {};
+    const userDataToSave = { ...oldUser, ...response.user };
+    localStorage.setItem('user', JSON.stringify(userDataToSave));
+    return userDataToSave;
+  }
+  return response;
+};
+
 const authService = {
   register,
   login,
   logout,
+  getMe,
 };
 
 export default authService;

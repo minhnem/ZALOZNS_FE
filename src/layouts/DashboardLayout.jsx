@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Avatar, Dropdown, theme, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, theme, Typography, App } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { 
   FaChartPie, 
@@ -17,10 +17,11 @@ import {
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../features/auth/authSlice';
+import { logout, getMe } from '../features/auth/authSlice';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProfileModal from '../components/ProfileModal';
+import { hasPermission } from '../utils/hasPermission';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -31,6 +32,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const router = useRouter();
   const dispatch = useDispatch();
+  const { message: messageApi } = App.useApp();
   
   const { token, user } = useSelector((state) => state.auth);
 
@@ -41,8 +43,10 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
   useEffect(() => {
     if (mounted && !token) {
       router.push('/login');
+    } else if (mounted && token) {
+      dispatch(getMe());
     }
-  }, [mounted, token, router]);
+  }, [mounted, token, router, dispatch]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -206,7 +210,21 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
             selectedKeys={[router.pathname]}
             defaultOpenKeys={menuItems.find(item => item.children?.some(child => router.pathname === child.key)) ? [menuItems.find(item => item.children?.some(child => router.pathname === child.key)).key] : []}
             items={menuItems}
-            onClick={({ key }) => router.push(key)}
+            onClick={({ key }) => {
+              if (key === '/marketing/create' && !hasPermission(user, 'campaign_create')) {
+                return messageApi.warning('Bạn không có quyền tạo chiến dịch!');
+              }
+              if (key === '/zns-templates' && !hasPermission(user, 'zns_view')) {
+                return messageApi.warning('Bạn không có quyền xem mẫu ZNS!');
+              }
+              if (key === '/settings' && !hasPermission(user, 'system_edit') && !hasPermission(user, 'system_view')) {
+                return messageApi.warning('Bạn không có quyền truy cập hệ thống cài đặt!');
+              }
+              if (key === '/users' && !hasPermission(user, 'data_view')) {
+                return messageApi.warning('Bạn không có quyền xem dữ liệu hệ thống!');
+              }
+              router.push(key);
+            }}
             style={{ borderRight: 'none' }}
           />
         </div>

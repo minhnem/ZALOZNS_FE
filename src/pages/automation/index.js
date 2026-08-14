@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Card, Button, Select, Radio, Table, Badge, Tag, Input, Space, Divider, Row, Col, message, List } from 'antd';
+import { Typography, Card, Button, Select, Radio, Table, Badge, Tag, Input, Space, Divider, Row, Col, List, App } from 'antd';
 import {
   PauseCircleOutlined,
   PlayCircleOutlined,
@@ -12,11 +12,15 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
 import { useRouter } from 'next/router';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
 
 const { Title, Text } = Typography;
 
 export default function AutomationPage() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
+  const { message: messageApi } = App.useApp();
   const [isRunning, setIsRunning] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaigns, setActiveCampaigns] = useState([]);
@@ -36,7 +40,7 @@ export default function AutomationPage() {
         setActiveCampaigns(res.filter(c => c.status === 'active' && c.is_auto_run));
       }
     } catch (error) {
-      message.error('Lấy dữ liệu chiến dịch thất bại');
+      messageApi.error('Lấy dữ liệu chiến dịch thất bại');
     }
   };
 
@@ -59,9 +63,9 @@ export default function AutomationPage() {
         audience: manualAudience
       };
       const res = await handleAPI('/api/campaigns/trigger', payload, 'post');
-      message.success(res.message || 'Đã kích hoạt chiến dịch thành công!');
+      messageApi.success(res.message || 'Đã kích hoạt chiến dịch thành công!');
     } catch (error) {
-      message.error(error.message || 'Có lỗi xảy ra khi kích hoạt!');
+      messageApi.error(error.message || 'Có lỗi xảy ra khi kích hoạt!');
     } finally {
       setTriggerLoading(false);
     }
@@ -178,7 +182,10 @@ export default function AutomationPage() {
                   icon={isRunning ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
                   size="large"
                   style={{ width: '100%', height: 60, fontSize: 16, fontWeight: 600 }}
-                  onClick={() => setIsRunning(!isRunning)}
+                  onClick={() => {
+                    if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền thay đổi trạng thái hệ thống!');
+                    setIsRunning(!isRunning);
+                  }}
                 >
                   {isRunning ? "Tạm Dừng Hệ Thống" : "Khởi Động Lại Hệ Thống"}
                 </Button>
@@ -225,7 +232,10 @@ export default function AutomationPage() {
                 icon={<ThunderboltOutlined />}
                 size="large"
                 style={{ background: '#d97706', borderColor: '#d97706', fontWeight: 600, padding: '0 32px' }}
-                onClick={handleManualTrigger}
+                onClick={() => {
+                  if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền kích hoạt chiến dịch!');
+                  handleManualTrigger();
+                }}
                 loading={triggerLoading}
               >
                 🚀 KÍCH HOẠT CHẠY NGAY LẬP TỨC
@@ -267,11 +277,16 @@ export default function AutomationPage() {
                           type="primary" 
                           ghost 
                           icon={<EditOutlined />}
-                          onClick={() => router.push(`/marketing/create?edit=${camp._id}`)}
+                          onClick={() => {
+                            if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
+                            router.push(`/marketing/create?edit=${camp._id}`);
+                          }}
                         >
                           Sửa Chiến Dịch
                         </Button>
-                        <Button type="default" danger icon={<PauseCircleOutlined />}>
+                        <Button type="default" danger icon={<PauseCircleOutlined />} onClick={() => {
+                          if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền hủy lịch chạy!');
+                        }}>
                           Hủy Lịch Chạy
                         </Button>
                       </Space>

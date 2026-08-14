@@ -12,11 +12,11 @@ import {
   TimePicker,
   Row,
   Col,
-  message,
-  Form,
-  Tag,
   Checkbox,
-  InputNumber
+  InputNumber,
+  App,
+  Form,
+  Tag
 } from 'antd';
 import dayjs from 'dayjs';
 import {
@@ -30,11 +30,15 @@ import {
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../../layouts/DashboardLayout';
 import handleAPI from '../../../apis/handleAPI';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../../utils/hasPermission';
 
 const { Title, Text } = Typography;
 
 export default function CreateCampaignPage() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
+  const { message: messageApi } = App.useApp();
   const { edit, view } = router.query; 
   const isViewMode = !!view;
   const campaignIdToFetch = edit || view;
@@ -43,6 +47,24 @@ export default function CreateCampaignPage() {
   const [isAutoRun, setIsAutoRun] = useState(false);
   const [hasEndTime, setHasEndTime] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Check permissions on mount
+  useEffect(() => {
+    if (!user) return; // Do nothing if logging out
+    if (!edit && !view) {
+      // Create mode
+      if (!hasPermission(user, 'campaign_create')) {
+        messageApi.warning('Bạn không có quyền tạo chiến dịch!');
+        router.replace('/marketing');
+      }
+    } else if (edit) {
+      // Edit mode
+      if (!hasPermission(user, 'campaign_edit')) {
+        messageApi.warning('Bạn không có quyền sửa chiến dịch!');
+        router.replace('/marketing');
+      }
+    }
+  }, [edit, view, user, router, messageApi]);
 
   // Template data from API
   const [templates, setTemplates] = useState([]);
@@ -161,7 +183,7 @@ export default function CreateCampaignPage() {
         });
       }
     } catch (error) {
-      message.error('Lấy dữ liệu chiến dịch thất bại');
+      messageApi.error('Lấy dữ liệu chiến dịch thất bại');
     } finally {
       setLoading(false);
     }
@@ -199,14 +221,14 @@ export default function CreateCampaignPage() {
 
       if (edit) {
         await handleAPI(`/api/campaigns/${edit}`, payload, 'put');
-        message.success('Cập nhật chiến dịch thành công');
+        messageApi.success('Cập nhật chiến dịch thành công');
       } else {
         await handleAPI('/api/campaigns', payload, 'post');
-        message.success('Tạo chiến dịch thành công');
+        messageApi.success('Tạo chiến dịch thành công');
       }
       router.push('/marketing');
     } catch (error) {
-      message.error('Có lỗi xảy ra khi lưu chiến dịch');
+      messageApi.error('Có lỗi xảy ra khi lưu chiến dịch');
       console.error(error);
     } finally {
       setLoading(false);
@@ -861,7 +883,10 @@ export default function CreateCampaignPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
             <Button size="large" onClick={() => router.push('/marketing')}>Hủy bỏ</Button>
             {isViewMode ? (
-              <Button type="primary" size="large" icon={<EditOutlined />} style={{ fontWeight: 600, background: '#d97706', borderColor: '#d97706' }} onClick={() => router.push(`/marketing/create?edit=${view}`)}>
+              <Button type="primary" size="large" icon={<EditOutlined />} style={{ fontWeight: 600, background: '#d97706', borderColor: '#d97706' }} onClick={() => {
+                if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
+                router.push(`/marketing/create?edit=${view}`);
+              }}>
                 Chuyển sang chế độ Sửa
               </Button>
             ) : (
