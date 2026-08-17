@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Card, Typography, Radio, InputNumber, Popconfirm, AutoComplete, Upload, App } from 'antd';
 import handleAPI from '../../apis/handleAPI';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, ImportOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined, ImportOutlined, InboxOutlined, DownloadOutlined, ClearOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useSelector } from 'react-redux';
@@ -16,6 +16,9 @@ const UsersPage = () => {
   const { message: messageApi } = App.useApp();
   const [data, setData] = useState([]);
   const [products, setProducts] = useState([]);
+  const [searchPhone, setSearchPhone] = useState('');
+  const [filterProduct, setFilterProduct] = useState('all');
+  const [filterStage, setFilterStage] = useState('all');
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -357,6 +360,42 @@ const UsersPage = () => {
     },
   ];
 
+  const filteredData = data.filter(item => {
+    // 1. Lọc theo Số điện thoại
+    if (searchPhone && !item.phone?.includes(searchPhone)) return false;
+    
+    // 2. Lọc theo Sản phẩm
+    if (filterProduct !== 'all') {
+      const hasProduct = item.purchased_products?.some(p => p.product_name === filterProduct);
+      if (!hasProduct) return false;
+    }
+
+    // 3. Lọc theo Giai đoạn (Đã sinh / Đang bầu)
+    if (filterStage !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let isBorn = false;
+      let isPregnant = false;
+
+      if (item.baby_dob) {
+        const dob = new Date(item.baby_dob);
+        dob.setHours(0, 0, 0, 0);
+        const diffTime = today.getTime() - dob.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0) isBorn = true;
+      } 
+      
+      if (!isBorn && item.edd) {
+        isPregnant = true;
+      }
+
+      if (filterStage === 'born' && !isBorn) return false;
+      if (filterStage === 'pregnant' && !isPregnant) return false;
+    }
+
+    return true;
+  });
+
   return (
     <DashboardLayout title="Quản lý dữ liệu">
       <Card bordered={false} className="shadow-sm">
@@ -378,9 +417,51 @@ const UsersPage = () => {
           </Space>
         </div>
 
+        <div className="flex gap-4 mb-6 flex-wrap">
+          <Input.Search
+            placeholder="Tìm theo số điện thoại..."
+            allowClear
+            value={searchPhone}
+            onChange={(e) => setSearchPhone(e.target.value)}
+            style={{ width: 250 }}
+          />
+          <Select
+            value={filterProduct}
+            onChange={setFilterProduct}
+            style={{ width: 250 }}
+            showSearch
+            options={[
+              { value: 'all', label: 'Tất cả sản phẩm' },
+              ...products.map(p => ({ value: p.name, label: p.name }))
+            ]}
+          />
+          <Select
+            value={filterStage}
+            onChange={setFilterStage}
+            style={{ width: 200 }}
+            options={[
+              { value: 'all', label: 'Tất cả giai đoạn' },
+              { value: 'born', label: 'Đã sinh bé' },
+              { value: 'pregnant', label: 'Đang mang bầu' }
+            ]}
+          />
+          {(searchPhone || filterProduct !== 'all' || filterStage !== 'all') && (
+            <Button 
+              icon={<ClearOutlined />} 
+              onClick={() => {
+                setSearchPhone('');
+                setFilterProduct('all');
+                setFilterStage('all');
+              }}
+            >
+              Hủy lọc
+            </Button>
+          )}
+        </div>
+
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={filteredData}
           loading={loading}
           pagination={{ pageSize: 10 }}
           scroll={{ x: 1000 }}

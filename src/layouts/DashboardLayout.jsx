@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Avatar, Dropdown, theme, Typography, App } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { 
-  FaChartPie, 
-  FaUsers, 
-  FaBullhorn, 
-  FaBolt, 
-  FaChartBar, 
+import {
+  FaChartPie,
+  FaUsers,
+  FaBullhorn,
+  FaBolt,
+  FaChartBar,
   FaCog,
   FaChevronDown,
   FaSignOutAlt,
@@ -33,7 +33,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { message: messageApi } = App.useApp();
-  
+
   const { token, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
@@ -63,22 +63,22 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       icon: <FaChartPie size={18} />,
       label: <span style={{ fontWeight: 500 }}>Bảng điều khiển</span>,
     },
-    {
+    hasPermission(user, 'data_view') && {
       key: '/users',
       icon: <FaDatabase size={18} />,
       label: <span style={{ fontWeight: 500 }}>Quản lý dữ liệu</span>,
     },
-    {
+    hasPermission(user, 'data_view') && {
       key: '/products',
       icon: <FaBox size={18} />,
       label: <span style={{ fontWeight: 500 }}>Sản phẩm & Chu kỳ</span>,
     },
-    {
+    hasPermission(user, 'data_view') && {
       key: '/customers',
       icon: <FaUsers size={18} />,
       label: <span style={{ fontWeight: 500 }}>Khách hàng</span>,
     },
-    {
+    hasPermission(user, 'campaign_view') && {
       key: 'marketing-group',
       icon: <FaBullhorn size={18} />,
       label: <span style={{ fontWeight: 500 }}>Chiến dịch</span>,
@@ -87,18 +87,18 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
           key: '/marketing',
           label: 'Danh sách chiến dịch',
         },
-        {
+        hasPermission(user, 'campaign_create') && {
           key: '/marketing/create',
           label: 'Tạo chiến dịch',
         }
-      ]
+      ].filter(Boolean)
     },
-    {
+    hasPermission(user, 'campaign_view') && {
       key: '/automation',
       icon: <FaBolt size={18} />,
       label: <span style={{ fontWeight: 500 }}>Tự động hóa</span>,
     },
-    {
+    hasPermission(user, 'zns_view') && {
       key: '/zns-templates',
       icon: <FaFileAlt size={18} />,
       label: <span style={{ fontWeight: 500 }}>Template ZNS</span>,
@@ -108,12 +108,12 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       icon: <FaChartBar size={18} />,
       label: <span style={{ fontWeight: 500 }}>Báo cáo</span>,
     },
-    {
+    (hasPermission(user, 'system_view') || hasPermission(user, 'system_edit')) && {
       key: '/settings',
       icon: <FaCog size={18} />,
       label: <span style={{ fontWeight: 500 }}>Cài đặt</span>,
     },
-  ];
+  ].filter(Boolean);
 
   const profileMenuItems = [
     {
@@ -139,13 +139,13 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       <Head>
         <title>{title} | Bảng điều khiển</title>
       </Head>
-      <Sider 
+      <Sider
         theme="light"
         width={260}
-        collapsible 
-        collapsed={collapsed} 
+        collapsible
+        collapsed={collapsed}
         onCollapse={(value) => setCollapsed(value)}
-        style={{ 
+        style={{
           overflow: 'auto',
           height: '100vh',
           position: 'fixed',
@@ -159,16 +159,16 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       >
         {/* Logo Section */}
         <div style={{ height: 64, display: 'flex', alignItems: 'center', padding: collapsed ? '0 14px' : '0 24px', cursor: 'pointer', overflow: 'hidden', transition: 'padding 0.3s ease' }} onClick={() => router.push('/dashboard')}>
-          <img 
-            src="/logo mobyflow2-01.png" 
-            alt="MobyFlow Logo" 
-            style={{ 
-              height: 52, 
+          <img
+            src="/logo mobyflow2-01.png"
+            alt="MobyFlow Logo"
+            style={{
+              height: 52,
               objectFit: 'contain',
               maxWidth: collapsed ? 52 : 200,
               transition: 'max-width 0.3s ease',
               display: 'block'
-            }} 
+            }}
           />
         </div>
 
@@ -176,9 +176,9 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
         {!collapsed && (
           <div style={{ padding: '16px 20px', marginBottom: 8 }}>
             <Dropdown menu={{ items: profileMenuItems }} trigger={['click']} placement="bottomLeft">
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '8px 12px',
                 background: '#f9fafb',
@@ -187,13 +187,13 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
                 cursor: 'pointer'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Avatar 
-                    style={{ backgroundColor: '#111827' }} 
+                  <Avatar
+                    style={{ backgroundColor: '#111827' }}
                     src={user?.avatar || undefined}
                     icon={<UserOutlined />}
                   />
                   <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>Admin:</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{user?.role || 'Vai trò'}:</Text>
                     <Text strong style={{ fontSize: 14 }}>{user?.fullName || user?.name || 'Người dùng'}</Text>
                   </div>
                 </div>
@@ -247,9 +247,9 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
         </Content>
         <Footer />
       </Layout>
-      <ProfileModal 
-        open={isProfileModalOpen} 
-        onCancel={() => setIsProfileModalOpen(false)} 
+      <ProfileModal
+        open={isProfileModalOpen}
+        onCancel={() => setIsProfileModalOpen(false)}
       />
     </Layout>
   );

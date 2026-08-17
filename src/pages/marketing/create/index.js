@@ -39,9 +39,9 @@ export default function CreateCampaignPage() {
   const router = useRouter();
   const user = useSelector((state) => state.auth.user);
   const { message: messageApi } = App.useApp();
-  const { edit, view } = router.query; 
+  const { edit, view, clone } = router.query; 
   const isViewMode = !!view;
-  const campaignIdToFetch = edit || view;
+  const campaignIdToFetch = edit || view || clone;
   const [form] = Form.useForm();
 
   const [isAutoRun, setIsAutoRun] = useState(false);
@@ -64,7 +64,7 @@ export default function CreateCampaignPage() {
         router.replace('/marketing');
       }
     }
-  }, [edit, view, user, router, messageApi]);
+  }, [edit, view, clone, user, router, messageApi]);
 
   // Template data from API
   const [templates, setTemplates] = useState([]);
@@ -107,7 +107,7 @@ export default function CreateCampaignPage() {
         exclude_refill_today: false
       });
     }
-  }, [edit, view]);
+  }, [edit, view, clone]);
 
   // When templateId changes, find the selected template
   useEffect(() => {
@@ -152,12 +152,22 @@ export default function CreateCampaignPage() {
       setLoading(true);
       const res = await handleAPI(`/api/campaigns/${idToFetch}`, null, 'get');
       if (res) {
-        setIsAutoRun(res.is_auto_run);
-        setHasEndTime(!!res.end_time);
+        let formData = { ...res };
+        
+        if (clone) {
+          formData.name = res.name + ' - Bản sao';
+          formData.status = 'draft';
+          formData.start_time = null; // Xóa thời gian bắt đầu của bản gốc
+          formData.end_time = null;
+        }
+
+        setIsAutoRun(formData.is_auto_run);
+        setHasEndTime(!!formData.end_time);
+
         form.setFieldsValue({
-          ...res,
-          start_time: res.start_time ? dayjs(res.start_time) : null,
-          end_time: res.end_time ? dayjs(res.end_time) : null,
+          ...formData,
+          start_time: formData.start_time ? dayjs(formData.start_time) : null,
+          end_time: formData.end_time ? dayjs(formData.end_time) : null,
           sub_events: res.sub_events ? res.sub_events.map(ev => ({
             ...ev,
             execute_time: dayjs(ev.execute_time),

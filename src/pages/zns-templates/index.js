@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import { 
   SyncOutlined, SearchOutlined, EyeOutlined, PlusOutlined, 
-  EditOutlined, DeleteOutlined, ThunderboltOutlined, MinusCircleOutlined
+  EditOutlined, DeleteOutlined, ThunderboltOutlined, MinusCircleOutlined, ClearOutlined
 } from '@ant-design/icons';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
@@ -166,13 +166,7 @@ export default function ZnsTemplatesPage() {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      let url = '/api/zns-templates';
-      const params = [];
-      if (searchText) params.push(`search=${encodeURIComponent(searchText)}`);
-      if (statusFilter) params.push(`status=${statusFilter}`);
-      if (params.length > 0) url += '?' + params.join('&');
-
-      const res = await handleAPI(url, null, 'get');
+      const res = await handleAPI('/api/zns-templates', null, 'get');
       setTemplates(res.map(item => ({ ...item, key: item._id })));
     } catch (error) {
       messageApi.error('Lấy danh sách template thất bại');
@@ -247,9 +241,11 @@ export default function ZnsTemplatesPage() {
     }
   };
 
-  const handleSearch = () => {
-    fetchTemplates();
-  };
+  const filteredTemplates = templates.filter(t => {
+    const matchSearch = !searchText || t.name?.toLowerCase().includes(searchText.toLowerCase()) || String(t.template_id).includes(searchText);
+    const matchStatus = !statusFilter || t.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   const columns = [
     {
@@ -311,13 +307,24 @@ export default function ZnsTemplatesPage() {
       }
     },
     {
+      title: 'Người tạo / Cập nhật',
+      key: 'audit',
+      width: 200,
+      render: (_, record) => (
+        <div style={{ fontSize: 12 }}>
+          <div style={{ marginBottom: 4 }}><Text type="secondary">Tạo:</Text> <Text strong>{record.created_by?.fullName || 'Hệ thống'}</Text></div>
+          <div><Text type="secondary">Sửa:</Text> <Text strong>{record.updated_by?.fullName || 'Hệ thống'}</Text></div>
+        </div>
+      )
+    },
+    {
       title: 'Thao tác',
       key: 'action',
-      width: 250,
+      width: 100,
       render: (_, record) => (
-        <Space>
+        <Space direction="vertical" size="small">
           <Tooltip title="Xem chi tiết">
-            <Button type="primary" ghost icon={<EyeOutlined />} size="small" onClick={() => handleView(record)}>Xem</Button>
+            <Button type="text" style={{ color: '#0ea5e9' }} icon={<EyeOutlined />} size="small" onClick={() => handleView(record)}>Xem</Button>
           </Tooltip>
           <Tooltip title="Sửa template">
             <Button type="text" icon={<EditOutlined />} size="small" style={{ color: '#d97706' }} onClick={() => {
@@ -423,7 +430,7 @@ export default function ZnsTemplatesPage() {
               placeholder="Tìm kiếm theo ID hoặc Tên template..." 
               prefix={<SearchOutlined />} style={{ width: 350 }} size="large"
               value={searchText} onChange={(e) => setSearchText(e.target.value)}
-              onPressEnter={handleSearch} allowClear
+              allowClear
             />
             <Select 
               placeholder="Lọc trạng thái" size="large" style={{ width: 200 }}
@@ -434,9 +441,20 @@ export default function ZnsTemplatesPage() {
                 { label: 'Từ chối', value: 'REJECTED' }
               ]}
             />
-            <Button type="primary" size="large" onClick={handleSearch} style={{ background: '#0d6e57' }}>Tìm kiếm</Button>
+            {(searchText || statusFilter) && (
+              <Button 
+                size="large"
+                icon={<ClearOutlined />} 
+                onClick={() => {
+                  setSearchText('');
+                  setStatusFilter(null);
+                }}
+              >
+                Hủy lọc
+              </Button>
+            )}
           </div>
-          <Table columns={columns} dataSource={templates} loading={loading} rowKey="_id" pagination={{ pageSize: 10 }} bordered />
+          <Table columns={columns} dataSource={filteredTemplates} loading={loading} rowKey="_id" pagination={{ pageSize: 10 }} bordered />
         </Card>
       </div>
 

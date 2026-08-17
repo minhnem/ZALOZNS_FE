@@ -20,7 +20,9 @@ import {
   EyeOutlined, 
   EditOutlined, 
   DeleteOutlined,
-  RocketOutlined 
+  RocketOutlined,
+  CopyOutlined,
+  ClearOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import { useSelector } from 'react-redux';
@@ -108,8 +110,41 @@ export default function MarketingPage() {
       render: (text, record) => {
         if (record.type === 'MASTER_CAMPAIGN') {
            const subCount = record.sub_events ? record.sub_events.length : 0;
-           return <Tag color="purple">{subCount} Sự kiện con</Tag>;
+           if (subCount > 0) {
+             const tooltipContent = (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 {record.sub_events.map((ev, idx) => (
+                   <span key={idx}>- Sự kiện {idx + 1}: [{ev.zns_template_id}]</span>
+                 ))}
+               </div>
+             );
+             return (
+               <Tooltip title={tooltipContent}>
+                 <Tag color="purple" style={{ cursor: 'pointer' }}>{subCount} Sự kiện con</Tag>
+               </Tooltip>
+             );
+           }
+           return <Tag color="purple">0 Sự kiện con</Tag>;
         }
+
+        if (record.type === 'LIFECYCLE' || record.type === 'PRODUCT_REFILL') {
+           const milestoneCount = record.milestones ? record.milestones.length : 0;
+           if (milestoneCount > 0) {
+             const tooltipContent = (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 {record.milestones.map((m, idx) => (
+                   <span key={idx}>- Mốc {idx + 1}: [{m.zns_template_id || text || 'Chưa set'}]</span>
+                 ))}
+               </div>
+             );
+             return (
+               <Tooltip title={tooltipContent}>
+                 <Tag color="magenta" style={{ cursor: 'pointer' }}>{milestoneCount} Mốc kịch bản</Tag>
+               </Tooltip>
+             );
+           }
+        }
+
         return text ? <Tag color="blue">{text}</Tag> : <span style={{ color: '#9ca3af' }}>Chưa set</span>;
       }
     },
@@ -123,27 +158,16 @@ export default function MarketingPage() {
         return <span style={{ color: '#9ca3af' }}>—</span>;
       }
     },
-    {
-      title: 'Người tạo / Cập nhật',
-      key: 'audit',
-      render: (_, record) => (
-        <div style={{ fontSize: 12 }}>
-          <div style={{ marginBottom: 4 }}><Text type="secondary">Tạo:</Text> <Text strong>{record.created_by?.fullName || 'Hệ thống'}</Text></div>
-          <div><Text type="secondary">Sửa:</Text> <Text strong>{record.updated_by?.fullName || 'Hệ thống'}</Text></div>
-        </div>
-      )
-    },
+
     {
       title: 'Trạng thái',
       key: 'status',
       dataIndex: 'status',
       render: (status) => {
         const map = {
-          active: { color: 'success', icon: '🟢', text: 'Active' },
-          scheduled: { color: 'warning', icon: '🟡', text: 'Scheduled' },
-          completed: { color: 'default', icon: '⚪', text: 'Completed' },
-          draft: { color: 'default', icon: '📝', text: 'Draft' },
-          paused: { color: 'error', icon: '🔴', text: 'Paused' }
+          active: { color: 'success', icon: '🟢', text: 'Đang hoạt động' },
+          draft: { color: 'default', icon: '📝', text: 'Bản nháp' },
+          paused: { color: 'error', icon: '🔴', text: 'Tạm dừng' }
         };
         const s = map[status] || map.draft;
         return <Tag color={s.color} style={{ fontWeight: 500 }}>{s.icon} {s.text}</Tag>;
@@ -166,8 +190,20 @@ export default function MarketingPage() {
       }
     },
     {
+      title: 'Người tạo / Cập nhật',
+      key: 'audit',
+      width: 200,
+      render: (_, record) => (
+        <div style={{ fontSize: 12 }}>
+          <div style={{ marginBottom: 4 }}><Text type="secondary">Tạo:</Text> <Text strong>{record.created_by?.fullName || 'Hệ thống'}</Text></div>
+          <div><Text type="secondary">Sửa:</Text> <Text strong>{record.updated_by?.fullName || 'Hệ thống'}</Text></div>
+        </div>
+      )
+    },
+    {
       title: 'Thao tác',
       key: 'action',
+      width: 120,
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Xem chi tiết">
@@ -177,6 +213,12 @@ export default function MarketingPage() {
             <Button type="text" icon={<EditOutlined />} onClick={() => {
               if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
               router.push(`/marketing/create?edit=${record._id}`);
+            }} />
+          </Tooltip>
+          <Tooltip title="Sao chép">
+            <Button type="text" style={{ color: '#8b5cf6' }} icon={<CopyOutlined />} onClick={() => {
+              if (!hasPermission(user, 'campaign_create')) return messageApi.warning('Bạn không có quyền tạo chiến dịch!');
+              router.push(`/marketing/create?clone=${record._id}`);
             }} />
           </Tooltip>
           {hasPermission(user, 'campaign_delete') ? (
@@ -250,25 +292,35 @@ export default function MarketingPage() {
                       style={{ width: 180 }}
                       options={[
                         { value: 'all', label: 'Tất cả loại' },
-                        { value: 'MASTER_CAMPAIGN', label: 'MASTER_CAMPAIGN' },
-                        { value: 'LIFECYCLE', label: 'LIFECYCLE' },
-                        { value: 'PRODUCT_REFILL', label: 'PRODUCT_REFILL' },
-                        { value: 'PROMOTION', label: 'PROMOTION' },
+                        { value: 'MASTER_CAMPAIGN', label: 'Sự kiện lớn (Master)' },
+                        { value: 'LIFECYCLE', label: 'Vòng đời (Lifecycle)' },
+                        { value: 'PRODUCT_REFILL', label: 'Nhắc mua lại' },
+                        { value: 'PROMOTION', label: 'Khuyến mãi' },
                       ]}
                     />
                     <Select
                       value={filterStatus}
                       onChange={setFilterStatus}
-                      style={{ width: 160 }}
+                      style={{ width: 180 }}
                       options={[
                         { value: 'all', label: 'Tất cả trạng thái' },
-                        { value: 'active', label: 'Active' },
-                        { value: 'scheduled', label: 'Scheduled' },
-                        { value: 'completed', label: 'Completed' },
-                        { value: 'draft', label: 'Draft' },
-                        { value: 'paused', label: 'Paused' },
+                        { value: 'active', label: 'Đang hoạt động' },
+                        { value: 'paused', label: 'Tạm dừng' },
+                        { value: 'draft', label: 'Bản nháp' },
                       ]}
                     />
+                    {(searchText || filterType !== 'all' || filterStatus !== 'all') && (
+                      <Button 
+                        icon={<ClearOutlined />} 
+                        onClick={() => {
+                          setSearchText('');
+                          setFilterType('all');
+                          setFilterStatus('all');
+                        }}
+                      >
+                        Hủy lọc
+                      </Button>
+                    )}
                   </div>
 
                   {/* Table Section */}
