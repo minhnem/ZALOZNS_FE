@@ -336,18 +336,7 @@ export default function CreateCampaignPage() {
                 </div>
               )}
 
-              {campaignType === 'PRODUCT_REFILL' && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 160, fontWeight: 500 }}>Nhắc trước (Ngày):</div>
-                  <Form.Item
-                    name="refill_reminder_days"
-                    style={{ flex: 1, maxWidth: 600, marginBottom: 0 }}
-                    rules={[{ required: true, message: 'Vui lòng nhập số ngày' }]}
-                  >
-                    <InputNumber size="large" style={{ width: '100%' }} placeholder="VD: -3 (nhắc trước 3 ngày), 0 (nhắc đúng ngày)" />
-                  </Form.Item>
-                </div>
-              )}
+
 
               {/* Exclusion filter */}
               {(campaignType === 'PROMOTION' || campaignType === 'ENCOURAGE_PURCHASE') && (

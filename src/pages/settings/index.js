@@ -4,6 +4,7 @@ import DashboardLayout from '../../layouts/DashboardLayout';
 import RoleManagement from '../../components/settings/RoleManagement';
 import UserManagement from '../../components/settings/UserManagement';
 import AuditLogManagement from '../../components/settings/AuditLogManagement';
+import KiotVietSettings from '../../components/settings/KiotVietSettings';
 
 const { Title, Text } = Typography;
 
@@ -28,6 +29,11 @@ export default function SettingsPage() {
       key: '4',
       label: 'Nhật ký hệ thống',
       children: <AuditLogManagement />
+    },
+    {
+      key: '5',
+      label: 'Kết nối KiotViet',
+      children: <KiotVietSettings />
     }
   ];
 
