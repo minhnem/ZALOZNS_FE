@@ -111,7 +111,7 @@ const BarChart = ({ data }) => {
         {data.map((d, idx) => {
           const x = 40 + gap + idx * (barWidth + gap);
           let currentY = chartHeight + 10;
-          
+
           const tooltipContent = (
             <div style={{ padding: '4px 8px', minWidth: 160 }}>
               <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>{d.month}</div>
@@ -131,8 +131,8 @@ const BarChart = ({ data }) => {
             <Tooltip key={idx} title={tooltipContent} color="#1f2937" placement="right">
               <g style={{ cursor: 'pointer', transition: 'opacity 0.3s' }}>
                 {/* Vùng vô hình để bắt sự kiện hover tốt hơn cho cả cột */}
-                <rect x={x - gap/4} y={10} width={barWidth + gap/2} height={chartHeight} fill="transparent" />
-                
+                <rect x={x - gap / 4} y={10} width={barWidth + gap / 2} height={chartHeight} fill="transparent" />
+
                 {categories.map(cat => {
                   const val = d[cat] || 0;
                   const height = maxVal > 0 ? (val / maxVal) * chartHeight : 0;
@@ -209,52 +209,11 @@ export default function DashboardPage() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      // Fake data matching the screenshot
-      const fakeData = {
-        keyMetrics: {
-          totalCustomers: 8245,
-          newRegistrations: 312,
-          activeSegments: 15,
-          totalRevenue: 1450000000
-        },
-        monthlySegmentation: [
-          { month: 'Jan', pregnancy: 5, newborn: 2, infant: 3, toddler: 7, preschool: 0 },
-          { month: 'Feb', pregnancy: 4, newborn: 3, infant: 4, toddler: 8, preschool: 0 },
-          { month: 'Mar', pregnancy: 6, newborn: 4, infant: 3, toddler: 6, preschool: 0 },
-          { month: 'Apr', pregnancy: 7, newborn: 5, infant: 4, toddler: 5, preschool: 0 },
-          { month: 'May', pregnancy: 8, newborn: 6, infant: 3, toddler: 4, preschool: 0 },
-          { month: 'Jun', pregnancy: 9, newborn: 7, infant: 2, toddler: 3, preschool: 0 },
-          { month: 'Jul', pregnancy: 7, newborn: 8, infant: 4, toddler: 2, preschool: 1 },
-          { month: 'Aug', pregnancy: 6, newborn: 7, infant: 4, toddler: 3, preschool: 2 },
-          { month: 'Sep', pregnancy: 5, newborn: 6, infant: 5, toddler: 3, preschool: 2 },
-          { month: 'Oct', pregnancy: 4, newborn: 5, infant: 6, toddler: 4, preschool: 3 },
-          { month: 'Nov', pregnancy: 3, newborn: 4, infant: 7, toddler: 5, preschool: 4 },
-          { month: 'Dec', pregnancy: 2, newborn: 3, infant: 8, toddler: 6, preschool: 5 },
-        ],
-        recentAutomations: [
-          { _id: '1', trigger: 'Pregnancy Week 32', childAgeStage: 'Thai kỳ Tuần 32', automationName: 'Gửi: Chuẩn bị đồ đi sinh', status: 'active' },
-          { _id: '2', trigger: 'Child 6th Month Birth', childAgeStage: 'Bé Tháng 6', automationName: 'Gửi: Chào mừng ăn dặm', status: 'active' },
-          { _id: '3', trigger: 'Child 12th Month Birth', childAgeStage: 'Bé Tháng 12', automationName: 'Gửi: Khuyến mãi phát triển cho bé tập đi', status: 'scheduled' },
-          { _id: '4', trigger: 'Child 18th Month Birth', childAgeStage: 'Bé Tháng 18', automationName: 'Gửi: Giảm giá sách hoạt động', status: 'scheduled' },
-        ],
-        customerList: [
-          { _id: '1', parentName: 'Mai Nguyễn', childName: 'Minh Tú', dueDate: '2004-03-03', childAge: '7 tháng', segment: 'PREGNANCY', lastPurchase: '2006-03-03', lifecycleValue: 10000, phone: '0901234567' },
-          { _id: '2', parentName: 'Nguyễn Phi', childName: 'Hà Nguyên', dueDate: '2004-02-15', childAge: '14 tháng', segment: 'NEWBORN', lastPurchase: '2006-02-15', lifecycleValue: 10000, phone: '0901234568' },
-          { _id: '3', parentName: 'Trần Minh', childName: 'Hoàng Đức', dueDate: '2004-08-23', childAge: 'Thai kỳ (Tuần 34)', segment: 'INFANT', lastPurchase: '2006-08-23', lifecycleValue: 10000, phone: '0901234569' },
-          { _id: '4', parentName: 'Thảo Lê', childName: 'Sam', dueDate: '2004-11-03', childAge: '7 tháng', segment: 'TODDLER', lastPurchase: '2006-11-03', lifecycleValue: 10000, phone: '0901234570' },
-        ],
-        alerts: [
-          { type: 'warning', message: '15 tã Mẹ & Bé hết hàng\nGửi cảnh báo nhập hàng' },
-          { type: 'info', message: 'Gợi ý: Liên hệ khách hàng Segment "Toddler" cho đồ chơi giáo dục' },
-          { type: 'info', message: 'Phân tích: 23% bé 6m chưa nhận hướng dẫn ăn dặm' }
-        ]
-      };
-
-      // Simulate API call delay
-      setTimeout(() => {
-        setDashboardData(fakeData);
-        setLoading(false);
-      }, 500);
+      const res = await handleAPI('/api/dashboard/stats', null, 'get');
+      if (res) {
+        setDashboardData(res);
+      }
+      setLoading(false);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
       messageApi.error('Không thể tải dữ liệu dashboard');
@@ -287,7 +246,7 @@ export default function DashboardPage() {
       trend: 'up'
     },
     {
-      title: 'Đăng ký mới (Tháng này)',
+      title: 'Khách hàng mua (Tháng này)',
       value: dashboardData.keyMetrics.newRegistrations,
       icon: <UserAddOutlined style={{ fontSize: 22 }} />,
       color: '#3b82f6',
@@ -296,8 +255,8 @@ export default function DashboardPage() {
       trend: 'up'
     },
     {
-      title: 'Phân khúc vòng đời hoạt động',
-      value: dashboardData.keyMetrics.activeSegments,
+      title: 'Tổng số chiến dịch',
+      value: dashboardData.keyMetrics.totalCampaigns,
       icon: <ApartmentOutlined style={{ fontSize: 22 }} />,
       color: '#8b5cf6',
       bg: '#f5f3ff',
@@ -305,15 +264,13 @@ export default function DashboardPage() {
       trend: 'up'
     },
     {
-      title: 'Doanh thu vòng đời (MTD)',
-      value: dashboardData.keyMetrics.totalRevenue,
-      prefix: 'đ',
-      icon: <DollarOutlined style={{ fontSize: 22 }} />,
-      color: '#f59e0b',
-      bg: '#fffbeb',
-      sparkColor: '#f59e0b',
-      trend: 'up',
-      isRevenue: true
+      title: 'Tin nhắn ZNS đã gửi (Tháng này)',
+      value: dashboardData.keyMetrics.totalZnsSent,
+      icon: <BellOutlined style={{ fontSize: 22 }} />,
+      color: '#ec4899',
+      bg: '#fdf2f8',
+      sparkColor: '#ec4899',
+      trend: 'up'
     }
   ] : [];
 
@@ -398,24 +355,7 @@ export default function DashboardPage() {
         return <Tag color={conf.tag} style={{ fontWeight: 500 }}>{conf.label}</Tag>;
       }
     },
-    {
-      title: 'Mua gần nhất',
-      dataIndex: 'lastPurchase',
-      key: 'lastPurchase',
-      width: 130,
-      render: (date) => date ? new Date(date).toLocaleDateString('vi-VN') : <Text type="secondary">—</Text>
-    },
-    {
-      title: 'Giá trị vòng đời (LCV)',
-      dataIndex: 'lifecycleValue',
-      key: 'lifecycleValue',
-      width: 160,
-      render: (val) => (
-        <Text style={{ fontWeight: 600, color: '#111827' }}>
-          đ{(val || 0).toLocaleString('vi-VN')} VNĐ
-        </Text>
-      )
-    },
+    // Đã gỡ bỏ cột Mua gần nhất và Giá trị vòng đời theo yêu cầu
     {
       title: 'Thao tác',
       key: 'actions',
@@ -425,12 +365,12 @@ export default function DashboardPage() {
           <Tooltip title="Chỉnh sửa">
             <Button type="text" size="small" icon={<EditOutlined />} onClick={() => {
               if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu khách hàng!');
-            }}/>
+            }} />
           </Tooltip>
           <Tooltip title="Xóa">
             <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => {
               if (!hasPermission(user, 'data_delete')) return messageApi.warning('Bạn không có quyền xóa dữ liệu khách hàng!');
-            }}/>
+            }} />
           </Tooltip>
         </Space>
       )
@@ -454,7 +394,7 @@ export default function DashboardPage() {
         {/* Page Title */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={3} style={{ margin: 0, color: '#111827', fontWeight: 700 }}>
-            Dashboard - Tổng Quan Vòng Đời
+            Thông Số Tổng Quan
           </Title>
           <Button
             icon={<SyncOutlined />}
@@ -473,11 +413,6 @@ export default function DashboardPage() {
 
               {/* Key Metrics */}
               <div>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong style={{ fontSize: 14, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    Chỉ Số Chính
-                  </Text>
-                </div>
                 <Row gutter={16}>
                   {metricCards.map((card, idx) => (
                     <Col xs={12} sm={12} md={6} key={idx}>
@@ -612,8 +547,8 @@ export default function DashboardPage() {
                   style={{
                     padding: '12px 14px',
                     borderRadius: 8,
-                    borderLeft: `4px solid ${alert.type === 'warning' ? '#f59e0b' : alert.type === 'info' ? '#3b82f6' : '#10b981'}`,
-                    background: alert.type === 'warning' ? '#fffbeb' : alert.type === 'info' ? '#eff6ff' : '#ecfdf5',
+                    borderLeft: `4px solid ${alert.type === 'warning' ? '#f59e0b' : alert.type === 'error' ? '#ef4444' : alert.type === 'info' ? '#3b82f6' : '#10b981'}`,
+                    background: alert.type === 'warning' ? '#fffbeb' : alert.type === 'error' ? '#fef2f2' : alert.type === 'info' ? '#eff6ff' : '#ecfdf5',
                     fontSize: 13,
                     lineHeight: 1.5,
                     color: '#374151',
