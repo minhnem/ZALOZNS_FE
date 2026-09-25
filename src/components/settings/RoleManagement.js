@@ -48,6 +48,12 @@ const PERMISSION_GROUPS = [
     permissions: [
       { label: 'Xem báo cáo', value: 'dashboard_view' },
     ]
+  },
+  {
+    title: 'Tự động hóa (Automation)',
+    permissions: [
+      { label: 'Thực hiện tự động hóa', value: 'automation_execute' },
+    ]
   }
 ];
 

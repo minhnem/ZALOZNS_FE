@@ -27,12 +27,15 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
 import dayjs from 'dayjs';
+import { useSelector } from 'react-redux';
+import { hasPermission } from '../../utils/hasPermission';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function ReportsPage() {
   const { message: messageApi } = App.useApp();
+  const { user } = useSelector((state) => state.auth);
 
   // State for master view
   const [campaigns, setCampaigns] = useState([]);
@@ -72,8 +75,10 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
-    fetchCampaigns(dateRange);
-  }, [dateRange]);
+    if (hasPermission(user, 'dashboard_view')) {
+      fetchCampaigns(dateRange);
+    }
+  }, [dateRange, user]);
 
   const onDateChange = (dates) => {
     setDateRange(dates);
@@ -259,6 +264,16 @@ export default function ReportsPage() {
       </div>
     );
   };
+
+  if (!hasPermission(user, 'dashboard_view')) {
+    return (
+      <DashboardLayout title="Báo Cáo">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <Title level={4} type="danger" style={{ color: '#ef4444' }}>Bạn không có quyền truy cập trang này!</Title>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Báo Cáo ZNS">

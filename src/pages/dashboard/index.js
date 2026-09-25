@@ -197,14 +197,19 @@ const MiniSparkline = ({ color = '#0d6e57', trend = 'up' }) => {
 export default function DashboardPage() {
   const { user } = useSelector((state) => state.auth);
   const { message: messageApi } = App.useApp();
+
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
 
   useEffect(() => {
-    fetchDashboard();
-  }, []);
+    if (hasPermission(user, 'dashboard_view')) {
+      fetchDashboard();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -382,6 +387,16 @@ export default function DashboardPage() {
       <DashboardLayout title="Dashboard">
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
           <Spin size="large" tip="Đang tải dữ liệu..." />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasPermission(user, 'dashboard_view')) {
+    return (
+      <DashboardLayout title="Dashboard">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <Title level={4} type="danger" style={{ color: '#ef4444' }}>Bạn không có quyền truy cập trang này!</Title>
         </div>
       </DashboardLayout>
     );

@@ -10,11 +10,11 @@ const { Title, Text } = Typography;
 
 export default function SettingsPage() {
   const items = [
-    {
-      key: '1',
-      label: 'Cài đặt hệ thống',
-      children: <Text type="secondary">Giao diện Cài đặt đang được xây dựng...</Text>
-    },
+    // {
+    //   key: '1',
+    //   label: 'Cài đặt hệ thống',
+    //   children: <Text type="secondary">Giao diện Cài đặt đang được xây dựng...</Text>
+    // },
     {
       key: '2',
       label: 'Phân quyền & Vai trò',

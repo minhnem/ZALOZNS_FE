@@ -58,7 +58,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
   } = theme.useToken();
 
   const menuItems = [
-    {
+    hasPermission(user, 'dashboard_view') && {
       key: '/dashboard',
       icon: <FaChartPie size={18} />,
       label: <span style={{ fontWeight: 500 }}>Bảng điều khiển</span>,
@@ -93,7 +93,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
         }
       ].filter(Boolean)
     },
-    hasPermission(user, 'campaign_view') && {
+    hasPermission(user, 'automation_execute') && {
       key: '/automation',
       icon: <FaBolt size={18} />,
       label: <span style={{ fontWeight: 500 }}>Tự động hóa</span>,
@@ -103,7 +103,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       icon: <FaFileAlt size={18} />,
       label: <span style={{ fontWeight: 500 }}>Template ZNS</span>,
     },
-    {
+    hasPermission(user, 'dashboard_view') && {
       key: '/reports',
       icon: <FaChartBar size={18} />,
       label: <span style={{ fontWeight: 500 }}>Báo cáo</span>,

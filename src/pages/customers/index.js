@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Card, 
-  Button, 
-  Table, 
-  Badge, 
-  Tag, 
-  Input, 
-  Select, 
-  Space, 
-  Row, 
-  Col, 
-  Checkbox, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Typography,
+  Card,
+  Button,
+  Table,
+  Badge,
+  Tag,
+  Input,
+  Select,
+  Space,
+  Row,
+  Col,
+  Checkbox,
   Statistic,
   Avatar,
   message,
@@ -20,11 +20,11 @@ import {
   DatePicker,
   Popconfirm
 } from 'antd';
-import { 
-  SearchOutlined, 
-  PlusOutlined, 
-  ImportOutlined, 
-  ReloadOutlined, 
+import {
+  SearchOutlined,
+  PlusOutlined,
+  ImportOutlined,
+  ReloadOutlined,
   FilterOutlined,
   EyeOutlined,
   EditOutlined,
@@ -50,7 +50,15 @@ export default function CustomersPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [products, setProducts] = useState([]);
   const [form] = Form.useForm();
-  
+
+  const [filters, setFilters] = useState({
+    search: '',
+    babyAge: 'all',
+    product: 'all',
+    refillStatus: 'all',
+    znsThisWeek: false
+  });
+
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editForm] = Form.useForm();
   const [editingCustomerId, setEditingCustomerId] = useState(null);
@@ -199,6 +207,92 @@ export default function CustomersPage() {
     }
   };
 
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => {
+      // 1. Search
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchPhone = c.phone?.toLowerCase().includes(searchLower);
+        const matchName = c.name?.toLowerCase().includes(searchLower);
+        const matchId = c._id?.toLowerCase().includes(searchLower);
+        if (!matchPhone && !matchName && !matchId) return false;
+      }
+
+      // 2. Baby Age
+      if (filters.babyAge !== 'all') {
+        const today = dayjs();
+        if (filters.babyAge === 'pregnancy') {
+          if (!c.edd || dayjs(c.edd).isBefore(today)) return false;
+        } else if (filters.babyAge === '0-3') {
+          if (!c.baby_dob) return false;
+          const months = today.diff(dayjs(c.baby_dob), 'month');
+          if (months < 0 || months > 3) return false;
+        } else if (filters.babyAge === '4-6') {
+          if (!c.baby_dob) return false;
+          const months = today.diff(dayjs(c.baby_dob), 'month');
+          if (months < 4 || months > 6) return false;
+        }
+      }
+
+      // 3. Product
+      if (filters.product !== 'all') {
+        const hasProduct = c.purchased_products?.some(p => p.product_name === filters.product);
+        if (!hasProduct) return false;
+      }
+
+      // 4. Refill Status
+      if (filters.refillStatus !== 'all') {
+        const today = dayjs();
+        let hasMatch = false;
+        if (filters.refillStatus === 'soon') {
+          hasMatch = c.purchased_products?.some(p => {
+            if (!p.expected_refill_date) return false;
+            const diff = dayjs(p.expected_refill_date).diff(today, 'day');
+            return diff >= 0 && diff <= 7;
+          });
+        } else if (filters.refillStatus === 'late') {
+          hasMatch = c.purchased_products?.some(p => {
+            if (!p.expected_refill_date) return false;
+            const diff = dayjs(p.expected_refill_date).diff(today, 'day');
+            return diff < 0;
+          });
+        }
+        if (!hasMatch) return false;
+      }
+
+      // 5. ZNS This Week
+      if (filters.znsThisWeek) {
+        if (c.zns_enabled === false) return false;
+        const today = dayjs();
+        const hasZNS = c.purchased_products?.some(p => {
+          if (!p.expected_refill_date) return false;
+          const refDate = dayjs(p.expected_refill_date);
+          return refDate.isAfter(today.subtract(1, 'day')) && refDate.isBefore(today.add(7, 'day'));
+        });
+        if (!hasZNS) return false;
+      }
+
+      return true;
+    });
+  }, [customers, filters]);
+
+  const stats = useMemo(() => {
+    let totalProductsSold = 0;
+
+    customers.forEach(c => {
+      if (c.orders && Array.isArray(c.orders)) {
+        c.orders.forEach(o => {
+          totalProductsSold += (o.quantity || 1);
+        });
+      }
+    });
+
+    return {
+      total: customers.length,
+      productsSold: totalProductsSold,
+    };
+  }, [customers]);
+
   const columns = [
     {
       title: 'Mã Khách Hàng',
@@ -221,7 +315,7 @@ export default function CustomersPage() {
             record.purchased_products.map((prod, index) => (
               <div key={index} style={{ fontSize: 13, marginBottom: 4 }}>
                 <Text strong>• {prod.product_name}</Text>
-                <br/>
+                <br />
                 <Text type="secondary" style={{ paddingLeft: 10 }}>
                   Dự kiến hết: {prod.expected_refill_date ? new Date(prod.expected_refill_date).toLocaleDateString('vi-VN') : 'Không rõ'}
                 </Text>
@@ -230,7 +324,7 @@ export default function CustomersPage() {
           ) : record.last_purchased_product ? (
             <div style={{ fontSize: 13 }}>
               <Text strong>• {record.last_purchased_product}</Text>
-              <br/>
+              <br />
               <Text type="secondary" style={{ paddingLeft: 10 }}>
                 Dự kiến hết: {record.next_refill_date ? new Date(record.next_refill_date).toLocaleDateString('vi-VN') : 'Không rõ'}
               </Text>
@@ -266,11 +360,11 @@ export default function CustomersPage() {
       render: (_, record) => (
         <Space direction="vertical" size="small">
           <Button type="text" size="small" icon={<EyeOutlined />} style={{ color: '#0ea5e9' }} onClick={() => handleOpenDetails(record)}>Chi tiết</Button>
-          <Button 
-            type="text" 
-            size="small" 
-            icon={<EditOutlined />} 
-            style={{ color: '#d97706' }} 
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            style={{ color: '#d97706' }}
             onClick={() => {
               if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
               handleOpenEdit(record);
@@ -290,10 +384,10 @@ export default function CustomersPage() {
               </Button>
             </Popconfirm>
           ) : (
-            <Button 
-              type="text" 
-              size="small" 
-              icon={<DeleteOutlined />} 
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
               danger
               onClick={(e) => {
                 e.stopPropagation();
@@ -311,7 +405,7 @@ export default function CustomersPage() {
   return (
     <DashboardLayout title="Quản lý Khách hàng">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
-        
+
         {/* HEADER */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -324,20 +418,11 @@ export default function CustomersPage() {
             </div>
           </div>
           <Space>
-            <Button 
-              icon={<ImportOutlined />} 
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
               size="large"
-              onClick={() => {
-                if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
-              }}
-            >
-              Import Đơn
-            </Button>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              size="large" 
-              style={{ background: '#0d6e57' }} 
+              style={{ background: '#0d6e57' }}
               onClick={() => {
                 if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
                 setIsModalVisible(true);
@@ -350,57 +435,50 @@ export default function CustomersPage() {
 
         {/* 1. SUMMARY CARDS */}
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={12}>
             <Card style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: '4px solid #3b82f6' }}>
-              <Statistic 
-                title="Tổng Khách Hàng" 
-                value={1250} 
+              <Statistic
+                title="Tổng Khách Hàng"
+                value={stats.total}
                 prefix={<FaUsers style={{ color: '#3b82f6', marginRight: 8 }} />}
                 valueStyle={{ color: '#111827', fontWeight: 600 }}
               />
             </Card>
           </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Card style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: '4px solid #10b981' }}>
-              <Statistic 
-                title="Đang theo dõi Refill" 
-                value={890} 
+              <Statistic
+                title="Tổng Sản Phẩm Bán Ra"
+                value={stats.productsSold}
                 prefix={<FaBoxOpen style={{ color: '#10b981', marginRight: 8 }} />}
                 valueStyle={{ color: '#10b981', fontWeight: 600 }}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: '4px solid #f59e0b' }}>
-              <Statistic 
-                title="Sắp hết bỉm/sữa (7 ngày)" 
-                value={45} 
-                prefix={<FaExclamationTriangle style={{ color: '#f59e0b', marginRight: 8 }} />}
-                valueStyle={{ color: '#f59e0b', fontWeight: 600 }}
               />
             </Card>
           </Col>
         </Row>
 
         {/* 2. SMART FILTERS */}
-        <Card 
-          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. BỘ LỌC DỮ LIỆU KHÁCH HÀNG (SMART FILTERS)</span>} 
+        <Card
+          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. BỘ LỌC DỮ LIỆU KHÁCH HÀNG (SMART FILTERS)</span>}
           style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
         >
           <Row gutter={[16, 16]}>
             <Col span={12}>
-              <Input 
-                size="large" 
-                placeholder="Tìm theo Tên mẹ, SĐT, Mã KH..." 
-                prefix={<SearchOutlined />} 
+              <Input
+                size="large"
+                placeholder="Tìm theo Tên mẹ, SĐT, Mã KH..."
+                prefix={<SearchOutlined />}
                 allowClear
+                value={filters.search}
+                onChange={e => setFilters({ ...filters, search: e.target.value })}
               />
             </Col>
             <Col span={12}>
-              <Select 
-                size="large" 
-                style={{ width: '100%' }} 
-                defaultValue="all"
+              <Select
+                size="large"
+                style={{ width: '100%' }}
+                value={filters.babyAge}
+                onChange={val => setFilters({ ...filters, babyAge: val })}
                 options={[
                   { value: 'all', label: 'Nhóm tuổi bé: Tất cả (0 - 36 tháng)' },
                   { value: 'pregnancy', label: 'Mang thai' },
@@ -410,22 +488,23 @@ export default function CustomersPage() {
               />
             </Col>
             <Col span={12}>
-              <Select 
-                size="large" 
-                style={{ width: '100%' }} 
-                defaultValue="all"
+              <Select
+                size="large"
+                style={{ width: '100%' }}
+                value={filters.product}
+                onChange={val => setFilters({ ...filters, product: val })}
                 options={[
                   { value: 'all', label: 'Sản phẩm theo dõi: Tất cả (Bỉm, Sữa...)' },
-                  { value: 'diaper', label: 'Bỉm các loại' },
-                  { value: 'milk', label: 'Sữa công thức' }
+                  ...products.map(p => ({ value: p.label, label: p.label }))
                 ]}
               />
             </Col>
             <Col span={12}>
-              <Select 
-                size="large" 
-                style={{ width: '100%' }} 
-                defaultValue="soon"
+              <Select
+                size="large"
+                style={{ width: '100%' }}
+                value={filters.refillStatus}
+                onChange={val => setFilters({ ...filters, refillStatus: val })}
                 options={[
                   { value: 'all', label: 'Trạng thái Refill: Tất cả' },
                   { value: 'soon', label: '🟢 Sắp đến ngày refill' },
@@ -434,10 +513,23 @@ export default function CustomersPage() {
               />
             </Col>
             <Col span={24} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-              <Checkbox>Chỉ hiện khách có lịch gửi ZNS trong tuần này</Checkbox>
+              <Checkbox
+                checked={filters.znsThisWeek}
+                onChange={e => setFilters({ ...filters, znsThisWeek: e.target.checked })}
+              >
+                Chỉ hiện khách có lịch gửi ZNS trong tuần này
+              </Checkbox>
               <Space>
-                <Button icon={<ReloadOutlined />}>Xóa bộ lọc</Button>
-                <Button type="primary" icon={<FilterOutlined />} style={{ background: '#0d6e57' }}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => setFilters({ search: '', babyAge: 'all', product: 'all', refillStatus: 'all', znsThisWeek: false })}
+                >
+                  Xóa bộ lọc
+                </Button>
+                {/* LỌC DỮ LIỆU button is essentially automatic because filters state changes immediately apply to filteredCustomers.
+                    But if they want a manual click, we could separate form state and applied filter state.
+                    Since it's React, auto-filter on change is better UX and we can just leave the button there or keep it as an active visual. */}
+                <Button type="primary" icon={<FilterOutlined />} style={{ background: '#0d6e57' }} onClick={() => messageApi.success('Đã áp dụng bộ lọc')}>
                   LỌC DỮ LIỆU
                 </Button>
               </Space>
@@ -447,9 +539,9 @@ export default function CustomersPage() {
 
         {/* 3. BẢNG DANH SÁCH */}
         <Card style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-          <Table 
-            columns={columns} 
-            dataSource={customers} 
+          <Table
+            columns={columns}
+            dataSource={filteredCustomers}
             loading={loading}
             pagination={{ pageSize: 10 }}
             bordered
@@ -467,24 +559,24 @@ export default function CustomersPage() {
         destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleAddCustomer} style={{ marginTop: 24 }}>
-          <Form.Item 
-            label="Số điện thoại" 
-            name="phone" 
+          <Form.Item
+            label="Số điện thoại"
+            name="phone"
             rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
           >
             <Input size="large" placeholder="Nhập số điện thoại khách hàng" />
           </Form.Item>
 
-          <Form.Item 
-            label="Sản phẩm đã mua (Tuỳ chọn)" 
+          <Form.Item
+            label="Sản phẩm đã mua (Tuỳ chọn)"
             name="product_id"
             extra="Nếu bạn chọn sản phẩm, khách hàng sẽ lập tức trở thành người mua (BUYER) và tự động tính ngày hết bỉm."
           >
             <Select size="large" placeholder="Chọn sản phẩm khách mua" options={products} allowClear />
           </Form.Item>
-          
-          <Form.Item 
-            label="Ngày mua (Tùy chọn)" 
+
+          <Form.Item
+            label="Ngày mua (Tùy chọn)"
             name="purchase_date"
             extra="Nếu không chọn, hệ thống sẽ lấy ngày hiện tại làm ngày mua."
           >
@@ -508,9 +600,9 @@ export default function CustomersPage() {
         destroyOnClose
       >
         <Form form={editForm} layout="vertical" onFinish={handleEditCustomer} style={{ marginTop: 24 }}>
-          <Form.Item 
-            label="Số điện thoại" 
-            name="phone" 
+          <Form.Item
+            label="Số điện thoại"
+            name="phone"
             rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
           >
             <Input size="large" placeholder="Nhập số điện thoại khách hàng" />
@@ -544,8 +636,8 @@ export default function CustomersPage() {
         <div style={{ marginBottom: 16 }}>
           <Text strong>Danh sách sản phẩm đã mua & Lịch nhắc nhở (ZNS)</Text>
         </div>
-        <Table 
-          dataSource={customerOrders} 
+        <Table
+          dataSource={customerOrders}
           loading={ordersLoading}
           pagination={false}
           bordered
@@ -571,10 +663,10 @@ export default function CustomersPage() {
               key: 'action',
               render: (_, record) => (
                 <Space>
-                  <Button 
-                    type="text" 
-                    style={{ color: '#d97706' }} 
-                    icon={<EditOutlined />} 
+                  <Button
+                    type="text"
+                    style={{ color: '#d97706' }}
+                    icon={<EditOutlined />}
                     onClick={() => {
                       if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
                       handleOpenEditOrder(record);
@@ -594,9 +686,9 @@ export default function CustomersPage() {
                       </Button>
                     </Popconfirm>
                   ) : (
-                    <Button 
-                      type="text" 
-                      danger 
+                    <Button
+                      type="text"
+                      danger
                       icon={<DeleteOutlined />}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -613,10 +705,10 @@ export default function CustomersPage() {
         />
         <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
           <Button type="primary" style={{ background: '#0d6e57' }} onClick={() => {
-              if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
-              setIsDetailsModalVisible(false);
-              form.setFieldsValue({ phone: selectedCustomer?.phone });
-              setIsModalVisible(true);
+            if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
+            setIsDetailsModalVisible(false);
+            form.setFieldsValue({ phone: selectedCustomer?.phone });
+            setIsModalVisible(true);
           }}>+ Thêm đơn hàng mới</Button>
         </div>
       </Modal>
@@ -629,8 +721,8 @@ export default function CustomersPage() {
         destroyOnClose
       >
         <Form form={editOrderForm} layout="vertical" onFinish={handleEditOrder} style={{ marginTop: 24 }}>
-          <Form.Item 
-            label="Ngày mua hàng" 
+          <Form.Item
+            label="Ngày mua hàng"
             name="purchase_date"
             extra="Hệ thống sẽ tự động tính lại ngày hết bỉm dựa theo chu kỳ của sản phẩm khi bạn thay đổi ngày mua."
           >

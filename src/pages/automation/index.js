@@ -21,6 +21,7 @@ export default function AutomationPage() {
   const router = useRouter();
   const user = useSelector((state) => state.auth.user);
   const { message: messageApi } = App.useApp();
+
   const [isRunning, setIsRunning] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaigns, setActiveCampaigns] = useState([]);
@@ -29,8 +30,10 @@ export default function AutomationPage() {
   const [triggerLoading, setTriggerLoading] = useState(false);
 
   useEffect(() => {
-    fetchCampaigns();
-  }, []);
+    if (hasPermission(user, 'automation_execute')) {
+      fetchCampaigns();
+    }
+  }, [user]);
 
   const fetchCampaigns = async () => {
     try {
@@ -135,6 +138,16 @@ export default function AutomationPage() {
     },
   ];
 
+  if (!hasPermission(user, 'automation_execute')) {
+    return (
+      <DashboardLayout title="Tự động hóa ZNS">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <Title level={4} type="danger" style={{ color: '#ef4444' }}>Bạn không có quyền truy cập trang này!</Title>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Tự động hóa ZNS">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
@@ -183,7 +196,7 @@ export default function AutomationPage() {
                   size="large"
                   style={{ width: '100%', height: 60, fontSize: 16, fontWeight: 600 }}
                   onClick={() => {
-                    if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền thay đổi trạng thái hệ thống!');
+                    if (!hasPermission(user, 'automation_execute')) return messageApi.warning('Bạn không có quyền thực hiện tự động hóa!');
                     setIsRunning(!isRunning);
                   }}
                 >
@@ -233,7 +246,7 @@ export default function AutomationPage() {
                 size="large"
                 style={{ background: '#d97706', borderColor: '#d97706', fontWeight: 600, padding: '0 32px' }}
                 onClick={() => {
-                  if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền kích hoạt chiến dịch!');
+                  if (!hasPermission(user, 'automation_execute')) return messageApi.warning('Bạn không có quyền thực hiện tự động hóa!');
                   handleManualTrigger();
                 }}
                 loading={triggerLoading}
