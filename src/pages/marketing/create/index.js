@@ -366,7 +366,7 @@ export default function CreateCampaignPage() {
           </Card>
 
           {/* 2. CẤU HÌNH TỆP KHÁCH HÀNG MỤC TIÊU */}
-          {campaignType !== 'PRODUCT_REFILL' && (
+          {campaignType !== 'PRODUCT_REFILL' && campaignType !== 'MASTER_CAMPAIGN' && campaignType !== 'LIFECYCLE' && (
             <Card
               title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. Cấu hình tệp khách hàng mục tiêu (Target Audience)</span>}
               bordered={false}
@@ -455,7 +455,7 @@ export default function CreateCampaignPage() {
           {/* 3. CẤU HÌNH THỜI GIAN */}
           {campaignType !== 'MASTER_CAMPAIGN' && (
             <Card
-              title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'PRODUCT_REFILL' ? '2' : '3'}. Cấu hình thời gian chạy</span>}
+              title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{['PRODUCT_REFILL', 'LIFECYCLE'].includes(campaignType) ? '2' : '3'}. Cấu hình thời gian chạy</span>}
               bordered={false}
               style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
             >
@@ -527,7 +527,7 @@ export default function CreateCampaignPage() {
 
           {/* 4. CẤU HÌNH KỊCH BẢN & CHỌN TEMPLATE */}
           <Card
-            title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'MASTER_CAMPAIGN' ? '3' : campaignType === 'PRODUCT_REFILL' ? '3' : '4'}. Cấu hình kịch bản & Chọn template</span>}
+            title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>{campaignType === 'MASTER_CAMPAIGN' ? '2' : ['PRODUCT_REFILL', 'LIFECYCLE'].includes(campaignType) ? '3' : '4'}. Cấu hình kịch bản & Chọn template</span>}
             bordered={false}
             style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
           >
