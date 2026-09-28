@@ -25,7 +25,8 @@ import {
   MobileOutlined,
   PlusOutlined,
   MinusCircleOutlined,
-  EditOutlined
+  EditOutlined,
+  LockOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../../layouts/DashboardLayout';
@@ -38,7 +39,16 @@ const { Title, Text } = Typography;
 export default function CreateCampaignPage() {
   const router = useRouter();
   const user = useSelector((state) => state.auth.user);
-  const { message: messageApi } = App.useApp();
+  
+  const currentPlan = user?.tenant?.plan || 'free';
+  const planFeatures = {
+    free: ['PRODUCT_REFILL'],
+    basic: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'ENCOURAGE_PURCHASE'],
+    pro: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'LIFECYCLE', 'MASTER_CAMPAIGN', 'ENCOURAGE_PURCHASE'],
+    enterprise: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'LIFECYCLE', 'MASTER_CAMPAIGN', 'ENCOURAGE_PURCHASE']
+  };
+
+  const { message: messageApi, modal } = App.useApp();
   const { edit, view, clone } = router.query; 
   const isViewMode = !!view;
   const campaignIdToFetch = edit || view || clone;
@@ -296,6 +306,23 @@ export default function CreateCampaignPage() {
                   <Select
                     size="large"
                     placeholder="Chọn loại chiến dịch"
+                    onChange={(val) => {
+                      const allowedFeatures = planFeatures[currentPlan] || planFeatures['free'];
+                      if (!allowedFeatures.includes(val)) {
+                        modal.warning({
+                          title: 'Nâng cấp gói dịch vụ',
+                          content: 'Gói dịch vụ của bạn không hỗ trợ tính năng này. Vui lòng nâng cấp gói để tiếp tục sử dụng.',
+                          okText: 'Nâng cấp ngay',
+                          cancelText: 'Đóng',
+                          showCancelButton: true,
+                          onOk: () => {
+                            router.push('/settings/billing');
+                          }
+                        });
+                        // Revert selection
+                        form.setFieldValue('type', undefined);
+                      }
+                    }}
                     options={[
                       { value: 'MASTER_CAMPAIGN', label: 'Chiến dịch Tháng (Master Automation)' },
                       { value: 'LIFECYCLE', label: 'Chăm sóc theo vòng đời (Lifecycle)' },
@@ -303,7 +330,15 @@ export default function CreateCampaignPage() {
                       { value: 'ENCOURAGE_PURCHASE', label: 'Khích lệ mua hàng (Chưa có đơn hàng)' },
                       { value: 'PROMOTION', label: 'Gửi hàng loạt (Khuyến mãi, Tri ân)' },
                       { value: 'BIRTHDAY', label: 'Chúc mừng sinh nhật' }
-                    ]}
+                    ].filter(opt => {
+                      // Ẩn các tính năng chưa ra mắt
+                      const comingSoon = ['ENCOURAGE_PURCHASE', 'PROMOTION', 'BIRTHDAY'];
+                      if (comingSoon.includes(opt.value)) return false;
+                      // Ẩn các tính năng không thuộc gói cước hiện tại
+                      const allowedFeatures = planFeatures[currentPlan] || planFeatures['free'];
+                      if (!allowedFeatures.includes(opt.value)) return false;
+                      return true;
+                    })}
                   />
                 </Form.Item>
               </div>

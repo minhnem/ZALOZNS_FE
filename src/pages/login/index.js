@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/router';
-import { ConfigProvider, Form, Input, Button, Segmented, Typography, App } from 'antd';
-import { login, register, reset } from '../../features/auth/authSlice';
+import { ConfigProvider, Form, Input, Button, Typography, App } from 'antd';
+import { login, reset } from '../../features/auth/authSlice';
 import styles from './index.module.css';
 
 const { Title, Text } = Typography;
@@ -11,7 +11,6 @@ const BRAND_NAME = "MobyFlow";
 const LOGO_URL = "/logo mobyflow2-01.png";
 
 export default function LoginPage() {
-  const [activeTab, setActiveTab] = useState('Đăng nhập'); // 'Đăng nhập' | 'Đăng ký'
   const [form] = Form.useForm();
   const { message: messageApi } = App.useApp();
   const dispatch = useDispatch();
@@ -27,26 +26,22 @@ export default function LoginPage() {
     }
 
     if (isSuccess && user) {
-      messageApi.success(`${activeTab === 'Đăng nhập' ? 'Đăng nhập' : 'Đăng ký'} thành công!`);
+      messageApi.success('Đăng nhập thành công!');
       // Đợi nửa giây để người dùng kịp nhìn thấy thông báo thành công trước khi chuyển trang
       setTimeout(() => {
-        router.push('/dashboard');
+        if (user.is_super_admin) {
+          router.push('/super-admin');
+        } else {
+          router.push('/dashboard');
+        }
       }, 500);
     }
 
     dispatch(reset());
-  }, [user, isError, isSuccess, authMessage, dispatch, router, activeTab]);
+  }, [user, isError, isSuccess, authMessage, dispatch, router]);
 
   const handleFinish = (values) => {
-    if (activeTab === 'Đăng nhập') {
-      dispatch(login({ email: values.email, password: values.password }));
-    } else {
-      dispatch(register({
-        fullName: values.fullName,
-        email: values.email,
-        password: values.password
-      }));
-    }
+    dispatch(login({ email: values.email, password: values.password }));
   };
 
   return (
@@ -58,19 +53,10 @@ export default function LoginPage() {
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         },
         components: {
-          Segmented: {
-            itemColor: '#0d6e57',
-            itemHoverColor: '#0a5644',
-            itemSelectedColor: '#ffffff',
-            itemSelectedBg: '#0d6e57',
-            trackBg: '#eef7f5',
-            trackPadding: 4,
-            borderRadius: 8,
-          },
           Form: {
             labelColor: '#374151',
             labelFontSize: 13,
-            itemMarginBottom: 14, // Giảm khoảng cách giữa các trường nhập liệu
+            itemMarginBottom: 14,
           }
         }
       }}
@@ -85,26 +71,12 @@ export default function LoginPage() {
             )}
           </div>
 
-          <Segmented
-            block
-            size="large"
-            options={['Đăng nhập', 'Đăng ký']}
-            value={activeTab}
-            onChange={(val) => {
-              setActiveTab(val);
-              form.resetFields();
-            }}
-            style={{ marginBottom: 24, fontWeight: 600 }}
-          />
-
           <div className={styles.mobyHeader}>
             <Title level={3} style={{ marginTop: 0, marginBottom: 8, color: '#111827', fontWeight: 700 }}>
-              {activeTab === 'Đăng nhập' ? 'Chào mừng trở lại' : 'Tạo tài khoản'}
+              Chào mừng trở lại
             </Title>
             <Text type="secondary" style={{ fontSize: 14 }}>
-              {activeTab === 'Đăng nhập'
-                ? 'Đăng nhập để quản lý dự án của bạn.'
-                : 'Đăng ký để bắt đầu quản lý dự án.'}
+              Đăng nhập để quản lý dự án của bạn.
             </Text>
           </div>
 
@@ -114,16 +86,6 @@ export default function LoginPage() {
             onFinish={handleFinish}
             requiredMark={false}
           >
-            {activeTab === 'Đăng ký' && (
-              <Form.Item
-                label={<span style={{ fontWeight: 600 }}>Họ và tên hoặc Tên Shop</span>}
-                name="fullName"
-                rules={[{ required: true, message: 'Vui lòng nhập họ tên hoặc tên Shop' }]}
-              >
-                <Input placeholder="Nguyễn Văn A hoặc Tên Shop" size="large" />
-              </Form.Item>
-            )}
-
             <Form.Item
               label={<span style={{ fontWeight: 600 }}>Email</span>}
               name="email"
@@ -146,27 +108,6 @@ export default function LoginPage() {
               <Input.Password placeholder="••••••••" size="large" />
             </Form.Item>
 
-            {activeTab === 'Đăng ký' && (
-              <Form.Item
-                label={<span style={{ fontWeight: 600 }}>Xác nhận mật khẩu</span>}
-                name="confirmPassword"
-                dependencies={['password']}
-                rules={[
-                  { required: true, message: 'Vui lòng xác nhận mật khẩu' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue('password') === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password placeholder="••••••••" size="large" />
-              </Form.Item>
-            )}
-
             <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
               <Button
                 type="primary"
@@ -176,18 +117,16 @@ export default function LoginPage() {
                 loading={isLoading}
                 style={{ fontWeight: 600, height: 48 }}
               >
-                {activeTab}
+                Đăng nhập
               </Button>
             </Form.Item>
           </Form>
 
-          {activeTab === 'Đăng nhập' && (
-            <div className={styles.mobyForgotWrapper}>
-              <a href="#forgot-password" className={styles.mobyForgotLink}>
-                Quên mật khẩu?
-              </a>
-            </div>
-          )}
+          <div className={styles.mobyForgotWrapper}>
+            <a href="#forgot-password" className={styles.mobyForgotLink}>
+              Quên mật khẩu?
+            </a>
+          </div>
         </div>
       </div>
     </ConfigProvider>

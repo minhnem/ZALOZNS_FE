@@ -5,16 +5,12 @@ import RoleManagement from '../../components/settings/RoleManagement';
 import UserManagement from '../../components/settings/UserManagement';
 import AuditLogManagement from '../../components/settings/AuditLogManagement';
 import KiotVietSettings from '../../components/settings/KiotVietSettings';
+import ZaloOASettings from '../../components/settings/ZaloOASettings';
 
 const { Title, Text } = Typography;
 
 export default function SettingsPage() {
   const items = [
-    // {
-    //   key: '1',
-    //   label: 'Cài đặt hệ thống',
-    //   children: <Text type="secondary">Giao diện Cài đặt đang được xây dựng...</Text>
-    // },
     {
       key: '2',
       label: 'Phân quyền & Vai trò',
@@ -32,6 +28,11 @@ export default function SettingsPage() {
     },
     {
       key: '5',
+      label: 'Kết nối Zalo OA',
+      children: <ZaloOASettings />
+    },
+    {
+      key: '6',
       label: 'Kết nối KiotViet',
       children: <KiotVietSettings />
     }

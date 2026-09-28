@@ -6,8 +6,8 @@ const API_URL = '/api/auth';
 const register = async (userData) => {
   const response = await axiosClient.post(`${API_URL}/register`, userData);
   if (response?.token) {
-    // Gom token vào chung với user data và loại bỏ 'message' để lưu vào localStorage
-    const userDataToSave = { ...response.user, token: response.token };
+    // Gom token và tenant vào chung với user data để lưu vào localStorage
+    const userDataToSave = { ...response.user, token: response.token, tenant: response.tenant };
     localStorage.setItem('user', JSON.stringify(userDataToSave));
     return userDataToSave;
   }
@@ -18,7 +18,7 @@ const register = async (userData) => {
 const login = async (userData) => {
   const response = await axiosClient.post(`${API_URL}/login`, userData);
   if (response?.token) {
-    const userDataToSave = { ...response.user, token: response.token };
+    const userDataToSave = { ...response.user, token: response.token, tenant: response.tenant };
     localStorage.setItem('user', JSON.stringify(userDataToSave));
     return userDataToSave;
   }
