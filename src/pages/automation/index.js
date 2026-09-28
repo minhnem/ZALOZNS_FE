@@ -231,13 +231,7 @@ export default function AutomationPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: 220, fontWeight: 500 }}>Tệp khách hàng áp dụng:</div>
-              <Radio.Group value={manualAudience} onChange={(e) => setManualAudience(e.target.value)}>
-                <Radio value="all">Tất cả khách hàng (đạt đk)</Radio>
-                <Radio value="test">Chỉ gửi chạy thử (Test 1-2 SĐT Admin)</Radio>
-              </Radio.Group>
-            </div>
+
 
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-start' }}>
               <Button

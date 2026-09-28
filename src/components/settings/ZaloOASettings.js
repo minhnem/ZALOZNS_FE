@@ -17,7 +17,7 @@ export default function ZaloOASettings() {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const res = await handleAPI('/api/zalo-zns/config', null, 'get');
+      const res = await handleAPI('/api/zns/config', null, 'get');
       if (res && res.oaId) {
         setConfig(res);
         form.setFieldsValue({
@@ -45,7 +45,7 @@ export default function ZaloOASettings() {
       setSaving(true);
       // znsTemplateId requires to be something to pass validation in backend, or backend handles it.
       // Assuming backend allows updating just these fields or we send a dummy znsTemplateId if none
-      const res = await handleAPI('/api/zalo-zns/config', { ...values, znsTemplateId: config?.znsTemplateId || 'NONE' }, 'post');
+      const res = await handleAPI('/api/zns/config', { ...values, znsTemplateId: config?.znsTemplateId || 'NONE' }, 'post');
       message.success('Cấu hình Zalo OA thành công!');
       setConfig(res);
       setIsEditing(false);

@@ -187,7 +187,6 @@ export default function SuperAdminDashboard() {
           <Option value="free">Free</Option>
           <Option value="basic">Basic</Option>
           <Option value="pro">Pro</Option>
-          <Option value="enterprise">Enterprise</Option>
         </Select>
       )
     },
@@ -448,7 +447,6 @@ export default function SuperAdminDashboard() {
                     <Option value="free">Free</Option>
                     <Option value="basic">Basic</Option>
                     <Option value="pro">Pro</Option>
-                    <Option value="enterprise">Enterprise</Option>
                   </Select>
                 </Form.Item>
               </Col>
@@ -526,7 +524,6 @@ export default function SuperAdminDashboard() {
                   <Option value="free">Free</Option>
                   <Option value="basic">Basic</Option>
                   <Option value="pro">Pro</Option>
-                  <Option value="enterprise">Enterprise</Option>
                 </Select>
               </Form.Item>
             </Col>

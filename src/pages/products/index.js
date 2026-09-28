@@ -66,7 +66,7 @@ export default function ProductsPage() {
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ status: 'active', usage_cycle_days: 30 });
+      form.setFieldsValue({ status: 'active', usage_cycle_days: 30, category: 'Khác' });
     }
     setIsModalVisible(true);
   };
@@ -228,17 +228,7 @@ export default function ProductsPage() {
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
           />
-          <Select 
-            value={filterCategory} 
-            onChange={setFilterCategory} 
-            size="large" 
-            style={{ width: 180 }}
-          >
-            <Select.Option value="all">Tất cả danh mục</Select.Option>
-            <Select.Option value="Bỉm - Tã">Bỉm - Tã</Select.Option>
-            <Select.Option value="Sữa công thức">Sữa công thức</Select.Option>
-            <Select.Option value="Đồ dùng vệ sinh">Đồ dùng vệ sinh</Select.Option>
-          </Select>
+
         </div>
 
         <Table 
@@ -275,17 +265,8 @@ export default function ProductsPage() {
           </Form.Item>
           
           <div style={{ display: 'flex', gap: 16 }}>
-            <Form.Item 
-              name="category" 
-              label="Danh mục"
-              style={{ flex: 1 }}
-              rules={[{ required: true, message: 'Chọn danh mục' }]}
-            >
-              <Select size="large">
-                <Select.Option value="Bỉm - Tã">Bỉm - Tã</Select.Option>
-                <Select.Option value="Sữa công thức">Sữa công thức</Select.Option>
-                <Select.Option value="Đồ dùng vệ sinh">Đồ dùng vệ sinh</Select.Option>
-              </Select>
+            <Form.Item name="category" hidden>
+              <Input />
             </Form.Item>
 
             <Form.Item 

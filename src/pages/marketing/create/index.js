@@ -43,9 +43,8 @@ export default function CreateCampaignPage() {
   const currentPlan = user?.tenant?.plan || 'free';
   const planFeatures = {
     free: ['PRODUCT_REFILL'],
-    basic: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'ENCOURAGE_PURCHASE'],
-    pro: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'LIFECYCLE', 'MASTER_CAMPAIGN', 'ENCOURAGE_PURCHASE'],
-    enterprise: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'LIFECYCLE', 'MASTER_CAMPAIGN', 'ENCOURAGE_PURCHASE']
+    basic: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'ENCOURAGE_PURCHASE', 'LIFECYCLE'],
+    pro: ['PRODUCT_REFILL', 'PROMOTION', 'BIRTHDAY', 'ONE_OFF_PROMO', 'LIFECYCLE', 'MASTER_CAMPAIGN', 'ENCOURAGE_PURCHASE']
   };
 
   const { message: messageApi, modal } = App.useApp();

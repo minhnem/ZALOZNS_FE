@@ -67,14 +67,7 @@ function ParamConfigSection({ form }) {
     <div style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <Text strong style={{ fontSize: 14 }}>Cấu hình biến động (Dynamic Fields):</Text>
-        <Button 
-          type="dashed" 
-          icon={<ThunderboltOutlined />} 
-          onClick={handleDetectParams}
-          style={{ color: '#d97706' }}
-        >
-          Tự động detect biến từ nội dung
-        </Button>
+
       </div>
 
       <div style={{ background: '#f9fafb', padding: 16, borderRadius: 8, border: '1px solid #e5e7eb' }}>
@@ -105,8 +98,7 @@ function ParamConfigSection({ form }) {
                     <Form.Item {...restField} name={[name, 'type']} style={{ marginBottom: 0 }} rules={[{ required: true }]}>
                       <Select options={[
                         { label: '🔒 SYSTEM (tự động)', value: 'SYSTEM' },
-                        { label: '✏️ CUSTOM (nhập tay)', value: 'CUSTOM' },
-                        { label: '🔄 LIFECYCLE (kịch bản)', value: 'LIFECYCLE' }
+                        { label: '✏️ CUSTOM (nhập tay)', value: 'CUSTOM' }
                       ]} />
                     </Form.Item>
                   </Col>
@@ -123,7 +115,7 @@ function ParamConfigSection({ form }) {
         </Form.List>
         {fields => fields?.length === 0 && (
           <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: 16 }}>
-            Chưa có biến nào. Nhập nội dung mẫu rồi bấm "Tự động detect" hoặc thêm thủ công.
+            Chưa có biến nào. Vui lòng bấm "Thêm biến" để cấu hình.
           </Text>
         )}
       </div>
@@ -356,27 +348,7 @@ export default function ZnsTemplatesPage() {
       <Form.Item label="Tên Template" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên template' }]}>
         <Input size="large" placeholder="Tên mẫu tin nhắn" />
       </Form.Item>
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item label="Loại ZNS" name="type" initialValue="CSKH">
-            <Select size="large" options={[
-              { label: 'CSKH', value: 'CSKH' },
-              { label: 'Khuyến mãi', value: 'Khuyến mãi' },
-              { label: 'OTP', value: 'OTP' },
-              { label: 'Giao dịch', value: 'Giao dịch' }
-            ]} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item label="Trạng thái" name="status" initialValue="PENDING">
-            <Select size="large" options={[
-              { label: 'Đã duyệt', value: 'APPROVED' },
-              { label: 'Đang chờ duyệt', value: 'PENDING' },
-              { label: 'Từ chối', value: 'REJECTED' }
-            ]} />
-          </Form.Item>
-        </Col>
-      </Row>
+
       <Form.Item label="Giá cước / tin (VNĐ)" name="price" initialValue={0}>
         <InputNumber size="large" style={{ width: '100%' }} min={0} step={50}
           formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
@@ -410,17 +382,6 @@ export default function ZnsTemplatesPage() {
               if (!hasPermission(user, 'zns_create')) return messageApi.warning('Bạn không có quyền thêm mới template!');
               setIsAddModalVisible(true);
             }}>Thêm Template</Button>
-            <Button 
-              type="primary" icon={<SyncOutlined spin={syncLoading} />} 
-              onClick={() => {
-                if (!hasPermission(user, 'zns_create') && !hasPermission(user, 'zns_edit')) return messageApi.warning('Bạn không có quyền đồng bộ template!');
-                handleSync();
-              }} 
-              loading={syncLoading} size="large"
-              style={{ background: '#0d6e57', borderColor: '#0d6e57' }}
-            >
-              Đồng bộ từ Zalo OA
-            </Button>
           </Space>
         </div>
 

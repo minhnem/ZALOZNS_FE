@@ -73,11 +73,7 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       icon: <FaBox size={18} />,
       label: <span style={{ fontWeight: 500 }}>Sản phẩm & Chu kỳ</span>,
     },
-    hasPermission(user, 'data_view') && {
-      key: '/customers',
-      icon: <FaUsers size={18} />,
-      label: <span style={{ fontWeight: 500 }}>Khách hàng</span>,
-    },
+
     hasPermission(user, 'campaign_view') && {
       key: 'marketing-group',
       icon: <FaBullhorn size={18} />,

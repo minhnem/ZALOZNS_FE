@@ -418,18 +418,7 @@ export default function CustomersPage() {
             </div>
           </div>
           <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              size="large"
-              style={{ background: '#0d6e57' }}
-              onClick={() => {
-                if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
-                setIsModalVisible(true);
-              }}
-            >
-              Thêm Khách Hàng
-            </Button>
+            {/* Thêm Khách Hàng button was removed to avoid manual creation */}
           </Space>
         </div>
 
