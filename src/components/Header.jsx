@@ -33,36 +33,11 @@ const Header = () => {
         zIndex: 10
       }}
     >
-      {/* Search Bar - Center/Left aligned based on image */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: 24 }}>
-        <Input 
-          placeholder="Tìm kiếm..." 
-          prefix={<FaSearch color="#9ca3af" />} 
-          style={{ width: 280, borderRadius: 20, background: '#f9fafb' }}
-          bordered={false}
-          size="large"
-        />
-      </div>
+      {/* Search Bar - Removed */}
+      <div style={{ flex: 1 }}></div>
 
       {/* Right Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-        <Dropdown menu={{ items: notificationMenu }} trigger={['click']} placement="bottomRight">
-          <Badge count={2} size="small" style={{ backgroundColor: '#ef4444' }}>
-            <div style={{ 
-              width: 36, 
-              height: 36, 
-              borderRadius: '50%', 
-              background: '#f3f4f6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#4b5563'
-            }}>
-              <FaBell size={16} />
-            </div>
-          </Badge>
-        </Dropdown>
         
         <div style={{ cursor: 'pointer' }}>
           <Avatar 

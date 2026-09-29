@@ -254,13 +254,6 @@ export default function ZnsTemplatesPage() {
       ellipsis: true
     },
     {
-      title: 'Loại ZNS',
-      dataIndex: 'type',
-      key: 'type',
-      width: 120,
-      render: (text) => <Tag>{text}</Tag>
-    },
-    {
       title: 'Biến động',
       dataIndex: 'params',
       key: 'params',
@@ -285,18 +278,6 @@ export default function ZnsTemplatesPage() {
       key: 'price',
       width: 100,
       render: (price) => `${(price || 0).toLocaleString('vi-VN')} VNĐ`
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      width: 140,
-      render: (status) => {
-        if (status === 'APPROVED') return <Tag color="green">Đã duyệt</Tag>;
-        if (status === 'PENDING') return <Tag color="orange">Đang chờ</Tag>;
-        if (status === 'REJECTED') return <Tag color="red">Từ chối</Tag>;
-        return <Tag>{status}</Tag>;
-      }
     },
     {
       title: 'Người tạo / Cập nhật',
@@ -355,13 +336,6 @@ export default function ZnsTemplatesPage() {
           parser={v => v.replace(/\$\s?|(,*)/g, '')}
         />
       </Form.Item>
-      <Form.Item 
-        label="Nội dung mẫu" 
-        name="content"
-        extra="Sử dụng {tên_biến} để đánh dấu biến động. VD: Chào {customer_name}, mã giảm giá {voucher_code}"
-      >
-        <Input.TextArea rows={5} placeholder="Chào mẹ {customer_name}, bé nhà mình sắp hết bỉm rồi đấy ạ! Nhập mã {voucher_code} để được giảm 10%..." />
-      </Form.Item>
 
       <Divider style={{ margin: '12px 0' }} />
       <ParamConfigSection form={form} />
@@ -393,25 +367,15 @@ export default function ZnsTemplatesPage() {
               value={searchText} onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
-            <Select 
-              placeholder="Lọc trạng thái" size="large" style={{ width: 200 }}
-              value={statusFilter} onChange={(val) => setStatusFilter(val)} allowClear
-              options={[
-                { label: 'Đã duyệt', value: 'APPROVED' },
-                { label: 'Đang chờ duyệt', value: 'PENDING' },
-                { label: 'Từ chối', value: 'REJECTED' }
-              ]}
-            />
-            {(searchText || statusFilter) && (
+            {searchText && (
               <Button 
                 size="large"
                 icon={<ClearOutlined />} 
                 onClick={() => {
                   setSearchText('');
-                  setStatusFilter(null);
                 }}
               >
-                Hủy lọc
+                Hủy tìm kiếm
               </Button>
             )}
           </div>
