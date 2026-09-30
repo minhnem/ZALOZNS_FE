@@ -342,35 +342,6 @@ export default function CreateCampaignPage() {
                 </Form.Item>
               </div>
 
-              {/* Chọn sản phẩm — Luôn hiển thị để phục vụ lọc thêm cho mọi loại chiến dịch ngoại trừ Vòng đời và Nhắc mua lại */}
-              {(campaignType !== 'LIFECYCLE' && campaignType !== 'MASTER_CAMPAIGN' && campaignType !== 'PRODUCT_REFILL') && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 160, fontWeight: 500 }}>Sản phẩm:</div>
-                  <Form.Item
-                    name="product_id"
-                    style={{ flex: 1, maxWidth: 600, marginBottom: 0 }}
-                  >
-                    <Select
-                      size="large"
-                      placeholder="-- Chọn sản phẩm áp dụng cho chiến dịch --"
-                      showSearch
-                      optionFilterProp="label"
-                      allowClear
-                      options={[
-                        { value: 'all', label: 'Tất cả sản phẩm' },
-                        ...products
-                          .filter(p => p.status === 'active')
-                          .map(p => ({
-                            value: p._id,
-                            label: `${p.name} (${p.category} — Chu kỳ ${p.usage_cycle_days} ngày)`
-                          }))
-                      ]}
-                    />
-                  </Form.Item>
-                </div>
-              )}
-
-
 
               {/* Exclusion filter */}
               {(campaignType === 'PROMOTION' || campaignType === 'ENCOURAGE_PURCHASE') && (
@@ -399,6 +370,8 @@ export default function CreateCampaignPage() {
             </div>
           </Card>
 
+          {campaignType && (
+            <>
           {/* 2. CẤU HÌNH TỆP KHÁCH HÀNG MỤC TIÊU */}
           {campaignType !== 'PRODUCT_REFILL' && campaignType !== 'MASTER_CAMPAIGN' && campaignType !== 'LIFECYCLE' && (
             <Card
@@ -909,6 +882,8 @@ export default function CreateCampaignPage() {
               </div>
             </div>
           </Card>
+            </>
+          )}
 
           </fieldset>
 

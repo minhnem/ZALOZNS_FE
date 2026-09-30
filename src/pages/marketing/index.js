@@ -11,7 +11,6 @@ import {
   Space, 
   Tooltip,
   Popconfirm,
-  Tabs,
   App
 } from 'antd';
 import { 
@@ -29,7 +28,6 @@ import { useSelector } from 'react-redux';
 import handleAPI from '../../apis/handleAPI';
 import { hasPermission } from '../../utils/hasPermission';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import LifecycleMilestones from '../../components/LifecycleMilestones';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -267,84 +265,68 @@ export default function MarketingPage() {
           </Button>
         </div>
 
-        <Tabs
-          defaultActiveKey="1"
-          items={[
-            {
-              key: '1',
-              label: 'Quản Lý Chiến Dịch ZNS',
-              children: (
-                <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                  
-                  {/* Filters Section */}
-                  <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-                    <Input 
-                      placeholder="Tìm kiếm chiến dịch..." 
-                      prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      style={{ width: 250, borderRadius: 8 }}
-                      allowClear
-                    />
-                    <Select
-                      value={filterType}
-                      onChange={setFilterType}
-                      style={{ width: 180 }}
-                      options={[
-                        { value: 'all', label: 'Tất cả loại' },
-                        { value: 'MASTER_CAMPAIGN', label: 'Sự kiện lớn (Master)' },
-                        { value: 'LIFECYCLE', label: 'Vòng đời (Lifecycle)' },
-                        { value: 'PRODUCT_REFILL', label: 'Nhắc mua lại' },
-                        { value: 'PROMOTION', label: 'Khuyến mãi' },
-                      ]}
-                    />
-                    <Select
-                      value={filterStatus}
-                      onChange={setFilterStatus}
-                      style={{ width: 180 }}
-                      options={[
-                        { value: 'all', label: 'Tất cả trạng thái' },
-                        { value: 'active', label: 'Đang hoạt động' },
-                        { value: 'paused', label: 'Tạm dừng' },
-                        { value: 'draft', label: 'Bản nháp' },
-                      ]}
-                    />
-                    {(searchText || filterType !== 'all' || filterStatus !== 'all') && (
-                      <Button 
-                        icon={<ClearOutlined />} 
-                        onClick={() => {
-                          setSearchText('');
-                          setFilterType('all');
-                          setFilterStatus('all');
-                        }}
-                      >
-                        Hủy lọc
-                      </Button>
-                    )}
-                  </div>
+        <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          
+          {/* Filters Section */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+            <Input 
+              placeholder="Tìm kiếm chiến dịch..." 
+              prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 250, borderRadius: 8 }}
+              allowClear
+            />
+            <Select
+              value={filterType}
+              onChange={setFilterType}
+              style={{ width: 180 }}
+              options={[
+                { value: 'all', label: 'Tất cả loại' },
+                { value: 'MASTER_CAMPAIGN', label: 'Sự kiện lớn (Master)' },
+                { value: 'LIFECYCLE', label: 'Vòng đời (Lifecycle)' },
+                { value: 'PRODUCT_REFILL', label: 'Nhắc mua lại' },
+                { value: 'PROMOTION', label: 'Khuyến mãi' },
+              ]}
+            />
+            <Select
+              value={filterStatus}
+              onChange={setFilterStatus}
+              style={{ width: 180 }}
+              options={[
+                { value: 'all', label: 'Tất cả trạng thái' },
+                { value: 'active', label: 'Đang hoạt động' },
+                { value: 'paused', label: 'Tạm dừng' },
+                { value: 'draft', label: 'Bản nháp' },
+              ]}
+            />
+            {(searchText || filterType !== 'all' || filterStatus !== 'all') && (
+              <Button 
+                icon={<ClearOutlined />} 
+                onClick={() => {
+                  setSearchText('');
+                  setFilterType('all');
+                  setFilterStatus('all');
+                }}
+              >
+                Hủy lọc
+              </Button>
+            )}
+          </div>
 
-                  {/* Table Section */}
-                  <Table 
-                    columns={columns} 
-                    dataSource={filteredCampaigns}
-                    loading={loading}
-                    rowKey="_id"
-                    pagination={{ 
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      showTotal: (total, range) => `Hiển thị ${range[0]}-${range[1]} / ${total} bản ghi`
-                    }}
-                  />
-                </Card>
-              )
-            },
-            {
-              key: '2',
-              label: 'Kịch Bản Vòng Đời (Lifecycle)',
-              children: <LifecycleMilestones />
-            }
-          ]}
-        />
+          {/* Table Section */}
+          <Table 
+            columns={columns} 
+            dataSource={filteredCampaigns}
+            loading={loading}
+            rowKey="_id"
+            pagination={{ 
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total, range) => `Hiển thị ${range[0]}-${range[1]} / ${total} bản ghi`
+            }}
+          />
+        </Card>
       </div>
     </DashboardLayout>
   );
