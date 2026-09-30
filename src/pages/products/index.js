@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Card, 
-  Table, 
-  Button, 
-  Input, 
-  Space, 
-  Tag, 
-  Modal, 
+import {
+  Typography,
+  Card,
+  Table,
+  Button,
+  Input,
+  Space,
+  Tag,
+  Modal,
   Form,
   InputNumber,
   Select,
   Popconfirm,
   App
 } from 'antd';
-import { 
-  PlusOutlined, 
-  EditOutlined, 
+import {
+  PlusOutlined,
+  EditOutlined,
   SearchOutlined,
   DeleteOutlined
 } from '@ant-design/icons';
@@ -120,16 +120,7 @@ export default function ProductsPage() {
       key: 'name',
       render: (text) => <Text strong>{text}</Text>
     },
-    {
-      title: 'Danh mục',
-      dataIndex: 'category',
-      key: 'category',
-      render: (cat) => (
-        <Tag color={cat === 'Bỉm - Tã' ? 'purple' : cat === 'Sữa công thức' ? 'blue' : 'default'}>
-          {cat}
-        </Tag>
-      )
-    },
+
     {
       title: 'Chu kỳ sử dụng ước tính',
       dataIndex: 'usage_cycle_days',
@@ -156,9 +147,9 @@ export default function ProductsPage() {
       width: 200,
       render: (_, record) => (
         <Space size="middle">
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
+          <Button
+            type="text"
+            icon={<EditOutlined />}
             onClick={() => {
               if (!hasPermission(user, 'data_edit')) return messageApi.warning('Bạn không có quyền sửa dữ liệu!');
               handleOpenModal(record);
@@ -177,10 +168,10 @@ export default function ProductsPage() {
               <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           ) : (
-            <Button 
-              type="text" 
-              danger 
-              icon={<DeleteOutlined />} 
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 messageApi.warning('Bạn không có quyền xóa dữ liệu!');
@@ -196,12 +187,12 @@ export default function ProductsPage() {
     <DashboardLayout title="Sản phẩm & Chu kỳ">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <Title level={3} style={{ margin: 0, color: '#111827' }}>Cấu hình Chu kỳ Sản phẩm</Title>
+          <Title level={3} style={{ margin: 0, color: '#111827' }}>Cấu Hình Chu kỳ Sản Phẩm</Title>
           <Text type="secondary">Quản lý vòng đời sử dụng để phục vụ cho các chiến dịch tự động (Refill)</Text>
         </div>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
           size="large"
           style={{ background: '#0d6e57' }}
           onClick={() => {
@@ -213,14 +204,14 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      <Card 
-        bordered={false} 
+      <Card
+        bordered={false}
         style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
         bodyStyle={{ padding: 0 }}
       >
         <div style={{ padding: 20, borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 16 }}>
-          <Input 
-            placeholder="Tìm kiếm tên sản phẩm..." 
+          <Input
+            placeholder="Tìm kiếm tên sản phẩm..."
             prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
             style={{ maxWidth: 400 }}
             size="large"
@@ -231,9 +222,9 @@ export default function ProductsPage() {
 
         </div>
 
-        <Table 
-          columns={columns} 
-          dataSource={filteredProducts} 
+        <Table
+          columns={columns}
+          dataSource={filteredProducts}
           rowKey="_id"
           loading={loading}
           pagination={{ pageSize: 10 }}
@@ -256,21 +247,21 @@ export default function ProductsPage() {
           onFinish={handleSave}
           style={{ marginTop: 24 }}
         >
-          <Form.Item 
-            name="name" 
+          <Form.Item
+            name="name"
             label="Tên sản phẩm"
             rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
           >
             <Input placeholder="VD: Bỉm Merries size S" size="large" />
           </Form.Item>
-          
+
           <div style={{ display: 'flex', gap: 16 }}>
             <Form.Item name="category" hidden>
               <Input />
             </Form.Item>
 
-            <Form.Item 
-              name="status" 
+            <Form.Item
+              name="status"
               label="Trạng thái"
               style={{ flex: 1 }}
             >
@@ -281,16 +272,16 @@ export default function ProductsPage() {
             </Form.Item>
           </div>
 
-          <Form.Item 
-            name="usage_cycle_days" 
+          <Form.Item
+            name="usage_cycle_days"
             label="Chu kỳ sử dụng ước tính (Ngày)"
             rules={[{ required: true, message: 'Vui lòng nhập chu kỳ' }]}
             extra="Số ngày dự kiến để khách hàng dùng hết sản phẩm này, phục vụ cho việc gửi ZNS tự động."
           >
-            <InputNumber 
-              min={1} 
-              max={365} 
-              size="large" 
+            <InputNumber
+              min={1}
+              max={365}
+              size="large"
               style={{ width: '100%' }}
               addonAfter="Ngày"
             />

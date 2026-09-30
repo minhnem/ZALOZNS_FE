@@ -25,7 +25,7 @@ const UsersPage = () => {
   const [babyInputType, setBabyInputType] = useState('dob');
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
-  
+
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const { Dragger } = Upload;
@@ -125,12 +125,12 @@ const UsersPage = () => {
       status: record.status || 'active',
       pregnancy_weeks: computedPregnancyWeeks,
       baby_dob: record.baby_dob ? dayjs(record.baby_dob) : null,
-      orders: record.orders && record.orders.length > 0 
+      orders: record.orders && record.orders.length > 0
         ? record.orders.map(o => ({
-            product_name: o.product_name,
-            purchase_date: o.purchase_date ? dayjs(o.purchase_date) : null,
-            quantity: o.quantity || 1
-          }))
+          product_name: o.product_name,
+          purchase_date: o.purchase_date ? dayjs(o.purchase_date) : null,
+          quantity: o.quantity || 1
+        }))
         : [{ product_name: undefined, purchase_date: undefined, quantity: 1 }]
     };
 
@@ -185,14 +185,14 @@ const UsersPage = () => {
       }
 
       // Xử lý Orders array
-      const processedOrders = values.orders 
+      const processedOrders = values.orders
         ? values.orders
-            .filter(o => o && o.product_name)
-            .map(o => ({
-              product_name: o.product_name.trim(),
-              purchase_date: o.purchase_date ? o.purchase_date.toISOString() : null,
-              quantity: o.quantity || 1
-            }))
+          .filter(o => o && o.product_name)
+          .map(o => ({
+            product_name: o.product_name.trim(),
+            purchase_date: o.purchase_date ? o.purchase_date.toISOString() : null,
+            quantity: o.quantity || 1
+          }))
         : [];
 
       const payload = {
@@ -345,10 +345,10 @@ const UsersPage = () => {
               <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           ) : (
-            <Button 
-              type="text" 
-              danger 
-              icon={<DeleteOutlined />} 
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 messageApi.warning('Bạn không có quyền xóa dữ liệu!');
@@ -363,7 +363,7 @@ const UsersPage = () => {
   const filteredData = data.filter(item => {
     // 1. Lọc theo Số điện thoại
     if (searchPhone && !item.phone?.includes(searchPhone)) return false;
-    
+
     // 2. Lọc theo Sản phẩm
     if (filterProduct !== 'all') {
       const hasProduct = item.purchased_products?.some(p => p.product_name === filterProduct);
@@ -383,8 +383,8 @@ const UsersPage = () => {
         const diffTime = today.getTime() - dob.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays >= 0) isBorn = true;
-      } 
-      
+      }
+
       if (!isBorn && item.edd) {
         isPregnant = true;
       }
@@ -400,7 +400,7 @@ const UsersPage = () => {
     <DashboardLayout title="Quản lý dữ liệu">
       <Card bordered={false} className="shadow-sm">
         <div className="flex justify-between items-center mb-6">
-          <Title level={4} style={{ margin: 0 }}>Quản lý dữ liệu tiềm năng</Title>
+          <Title level={4} style={{ margin: 0 }}>Quản Lý Dữ Liệu Tiềm Năng</Title>
           <Space>
             <Button icon={<ImportOutlined />} size="large" onClick={() => {
               if (!hasPermission(user, 'data_create')) return messageApi.warning('Bạn không có quyền thêm mới dữ liệu!');
@@ -446,8 +446,8 @@ const UsersPage = () => {
             ]}
           />
           {(searchPhone || filterProduct !== 'all' || filterStage !== 'all') && (
-            <Button 
-              icon={<ClearOutlined />} 
+            <Button
+              icon={<ClearOutlined />}
               onClick={() => {
                 setSearchPhone('');
                 setFilterProduct('all');
@@ -473,7 +473,7 @@ const UsersPage = () => {
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
-        width={700}
+        width={900}
       >
         <Form
           form={form}
@@ -572,10 +572,10 @@ const UsersPage = () => {
                 <InputNumber min={0} max={42} style={{ width: '100%' }} placeholder="Nhập số tuần thai..." addonAfter="tuần" />
               </Form.Item>
             </div>
-            
+
             <div className="col-span-1 md:col-span-2 bg-blue-50 p-4 rounded border border-blue-200">
               <div className="mb-2 font-medium text-blue-800">Sản phẩm khách đã mua (Tùy chọn)</div>
-              
+
               <Form.List name="orders">
                 {(fields, { add, remove }) => (
                   <>
@@ -585,7 +585,7 @@ const UsersPage = () => {
                           {...restField}
                           name={[name, 'product_name']}
                           label={name === 0 ? "Tên Sản phẩm" : ""}
-                          className="mb-0 flex-1"
+                          className="mb-0 flex-[2]"
                           tooltip={name === 0 ? "Bạn có thể gõ tên sản phẩm mới, hệ thống tự động lưu." : ""}
                         >
                           <AutoComplete

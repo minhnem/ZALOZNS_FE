@@ -41,7 +41,7 @@ export default function SettingsPage() {
   return (
     <DashboardLayout title="Cài đặt">
       <Card bordered={false} style={{ minHeight: '100%', borderRadius: 12 }}>
-        <Title level={3}>Cài đặt</Title>
+        <Title level={3}>Cài Đặt</Title>
         <Tabs defaultActiveKey="2" items={items} />
       </Card>
     </DashboardLayout>

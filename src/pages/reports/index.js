@@ -22,7 +22,8 @@ import {
   CalendarOutlined,
   SyncOutlined,
   UserOutlined,
-  WarningOutlined
+  WarningOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';

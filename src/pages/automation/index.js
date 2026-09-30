@@ -22,7 +22,6 @@ export default function AutomationPage() {
   const user = useSelector((state) => state.auth.user);
   const { message: messageApi } = App.useApp();
 
-  const [isRunning, setIsRunning] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaigns, setActiveCampaigns] = useState([]);
   const [manualCampaign, setManualCampaign] = useState('all');
@@ -56,6 +55,17 @@ export default function AutomationPage() {
       return `Hàng ngày lúc ${hour}:${min}`;
     }
     return cronStr;
+  };
+
+  const handleToggleStatus = async (campaignId, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+    try {
+      await handleAPI(`/api/campaigns/${campaignId}`, { status: newStatus }, 'put');
+      messageApi.success(newStatus === 'active' ? 'Đã khởi động lại lịch chạy thành công!' : 'Đã tạm dừng/hủy lịch chạy thành công!');
+      fetchCampaigns();
+    } catch (error) {
+      messageApi.error(error.message || 'Lỗi khi cập nhật trạng thái');
+    }
   };
 
   const handleManualTrigger = async () => {
@@ -152,64 +162,11 @@ export default function AutomationPage() {
     <DashboardLayout title="Tự động hóa ZNS">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
 
-        <Title level={3} style={{ margin: 0, color: '#111827' }}>TRẠM ĐIỀU KHIỂN TỰ ĐỘNG HÓA ZNS</Title>
+        <Title level={3} style={{ margin: 0, color: '#111827' }}>Trạm Điều Khiển Tự Động Hóa ZNS</Title>
 
-        {/* 1. STATUS */}
+        {/* 1. MANUAL TRIGGER */}
         <Card
-          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>1. TRẠNG THÁI BỘ MÁY TỰ ĐỘNG (SYSTEM STATUS)</span>}
-          style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-        >
-          <Row gutter={24} align="middle">
-            <Col span={18}>
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 16 }}>
-                  <Text strong>TRẠNG THÁI CRON JOB:</Text>
-                  {isRunning ? (
-                    <Badge status="success" text={<Text strong style={{ color: '#389e0d' }}>ĐANG HOẠT ĐỘNG (Running)</Text>} />
-                  ) : (
-                    <Badge status="error" text={<Text strong style={{ color: '#cf1322' }}>TẠM DỪNG (Paused)</Text>} />
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, background: '#f9fafb', padding: 16, borderRadius: 8, border: '1px solid #e5e7eb' }}>
-                  <Row>
-                    <Col span={8}><Text type="secondary">Cơ chế Lịch chạy:</Text></Col>
-                    <Col span={16}><Text strong>Đa luồng (Mỗi chiến dịch một lịch riêng)</Text></Col>
-                  </Row>
-                  <Row>
-                    <Col span={8}><Text type="secondary">Tổng số tiến trình đang chạy:</Text></Col>
-                    <Col span={16}>
-                      <Text strong style={{ fontSize: 18, color: '#0d6e57' }}>
-                        {activeCampaigns.length}
-                      </Text> tiến trình tự động hóa
-                    </Col>
-                  </Row>
-                </div>
-              </Space>
-            </Col>
-            <Col span={6} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}>
-                <Button
-                  type={isRunning ? "default" : "primary"}
-                  danger={isRunning}
-                  icon={isRunning ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-                  size="large"
-                  style={{ width: '100%', height: 60, fontSize: 16, fontWeight: 600 }}
-                  onClick={() => {
-                    if (!hasPermission(user, 'automation_execute')) return messageApi.warning('Bạn không có quyền thực hiện tự động hóa!');
-                    setIsRunning(!isRunning);
-                  }}
-                >
-                  {isRunning ? "Tạm Dừng Hệ Thống" : "Khởi Động Lại Hệ Thống"}
-                </Button>
-              </div>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* 2. MANUAL TRIGGER */}
-        <Card
-          title={<span style={{ color: '#d97706', fontWeight: 600 }}>2. KÍCH HOẠT CƯỠNG CHẾ THỦ CÔNG (MANUAL TRIGGER) ⚡</span>}
+          title={<span style={{ color: '#d97706', fontWeight: 600 }}>1. KÍCH HOẠT CƯỠNG CHẾ THỦ CÔNG (MANUAL TRIGGER) ⚡</span>}
           style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderColor: '#fcd34d' }}
           headStyle={{ background: '#fffbeb', borderBottomColor: '#fde68a' }}
         >
@@ -251,9 +208,9 @@ export default function AutomationPage() {
           </Space>
         </Card>
 
-        {/* 3. ALL CAMPAIGNS */}
+        {/* 2. ALL CAMPAIGNS */}
         <Card
-          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>3. DANH SÁCH CHIẾN DỊCH (TẤT CẢ)</span>}
+          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>2. DANH SÁCH CHIẾN DỊCH (TẤT CẢ)</span>}
           style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
         >
           {campaigns.length === 0 ? (
@@ -280,9 +237,9 @@ export default function AutomationPage() {
                     }
                     extra={
                       <Space>
-                        <Button 
-                          type="primary" 
-                          ghost 
+                        <Button
+                          type="primary"
+                          ghost
                           icon={<EditOutlined />}
                           onClick={() => {
                             if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
@@ -291,11 +248,21 @@ export default function AutomationPage() {
                         >
                           Sửa Chiến Dịch
                         </Button>
-                        <Button type="default" danger icon={<PauseCircleOutlined />} onClick={() => {
-                          if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền hủy lịch chạy!');
-                        }}>
-                          Hủy Lịch Chạy
-                        </Button>
+                        {camp.status === 'active' ? (
+                          <Button type="default" danger icon={<PauseCircleOutlined />} onClick={() => {
+                            if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
+                            handleToggleStatus(camp._id, camp.status);
+                          }}>
+                            Hủy Lịch Chạy
+                          </Button>
+                        ) : (
+                          <Button type="primary" icon={<PlayCircleOutlined />} style={{ background: '#0d6e57' }} onClick={() => {
+                            if (!hasPermission(user, 'campaign_edit')) return messageApi.warning('Bạn không có quyền sửa chiến dịch!');
+                            handleToggleStatus(camp._id, camp.status);
+                          }}>
+                            Khởi Động Lại
+                          </Button>
+                        )}
                       </Space>
                     }
                     style={{ marginBottom: 16, borderColor: '#e5e7eb', width: '100%' }}
@@ -327,36 +294,7 @@ export default function AutomationPage() {
           )}
         </Card>
 
-        {/* 4. LOGS */}
-        <Card
-          title={<span style={{ color: '#0d6e57', fontWeight: 600 }}>4. NHẬT KÝ TIẾN TRÌNH CHẠY TỰ ĐỘNG (DISPATCHER LOGS)</span>}
-          style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Space>
-              <Input
-                placeholder="Tìm kiếm log..."
-                prefix={<SearchOutlined />}
-                style={{ width: 300 }}
-                allowClear
-              />
-              <Select defaultValue="all" style={{ width: 150 }}>
-                <Select.Option value="all">Tất cả sự kiện</Select.Option>
-                <Select.Option value="success">Thành công</Select.Option>
-                <Select.Option value="error">Lỗi</Select.Option>
-              </Select>
-            </Space>
-            <Button icon={<SyncOutlined />}>Làm mới</Button>
-          </div>
 
-          <Table
-            columns={logColumns}
-            dataSource={logData}
-            pagination={{ pageSize: 10 }}
-            bordered
-            size="middle"
-          />
-        </Card>
 
       </div>
     </DashboardLayout>

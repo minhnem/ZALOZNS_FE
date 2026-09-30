@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Typography, Card, Button, Table, Tag, Space, Input, Modal, 
+import {
+  Typography, Card, Button, Table, Tag, Space, Input, Modal,
   Form, Select, InputNumber, Divider, Popconfirm, Tooltip, Row, Col, App
 } from 'antd';
-import { 
-  SyncOutlined, SearchOutlined, EyeOutlined, PlusOutlined, 
+import {
+  SyncOutlined, SearchOutlined, EyeOutlined, PlusOutlined,
   EditOutlined, DeleteOutlined, ThunderboltOutlined, MinusCircleOutlined, ClearOutlined
 } from '@ant-design/icons';
 import DashboardLayout from '../../layouts/DashboardLayout';
@@ -131,7 +131,7 @@ export default function ZnsTemplatesPage() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
   const [templates, setTemplates] = useState([]);
-  
+
   const router = useRouter();
 
   // Modal states
@@ -345,10 +345,10 @@ export default function ZnsTemplatesPage() {
   return (
     <DashboardLayout title="Quản lý Template ZNS">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <Title level={3} style={{ margin: 0, color: '#111827' }}>QUẢN LÝ TEMPLATE ZNS</Title>
+            <Title level={3} style={{ margin: 0, color: '#111827' }}>Quản Lý Template ZNS</Title>
             <Text type="secondary">Đồng bộ và quản lý các mẫu tin nhắn từ Zalo OA</Text>
           </div>
           <Space>
@@ -361,16 +361,16 @@ export default function ZnsTemplatesPage() {
 
         <Card style={{ borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
           <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
-            <Input 
-              placeholder="Tìm kiếm theo ID hoặc Tên template..." 
+            <Input
+              placeholder="Tìm kiếm theo ID hoặc Tên template..."
               prefix={<SearchOutlined />} style={{ width: 350 }} size="large"
               value={searchText} onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
             {searchText && (
-              <Button 
+              <Button
                 size="large"
-                icon={<ClearOutlined />} 
+                icon={<ClearOutlined />}
                 onClick={() => {
                   setSearchText('');
                 }}
@@ -396,7 +396,7 @@ export default function ZnsTemplatesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8 }}>
               <Text type="secondary">Template ID:</Text>
               <Text strong>{selectedTemplate.template_id}</Text>
-              
+
               <Text type="secondary">Trạng thái:</Text>
               <div>
                 {selectedTemplate.status === 'APPROVED' && <Tag color="green">Đã duyệt</Tag>}
@@ -413,7 +413,7 @@ export default function ZnsTemplatesPage() {
               <Text type="secondary">Đồng bộ lần cuối:</Text>
               <Text>{selectedTemplate.last_synced_at ? new Date(selectedTemplate.last_synced_at).toLocaleString('vi-VN') : 'Chưa đồng bộ'}</Text>
             </div>
-            
+
             <Divider style={{ margin: '8px 0' }} />
 
             {/* Params table */}
@@ -448,10 +448,10 @@ export default function ZnsTemplatesPage() {
             )}
 
             <Divider style={{ margin: '8px 0' }} />
-            
+
             <div>
               <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Nội dung mẫu:</Text>
-              <div style={{ 
+              <div style={{
                 background: '#f3f4f6', padding: 16, borderRadius: 8, whiteSpace: 'pre-wrap',
                 border: '1px solid #e5e7eb', fontFamily: 'monospace'
               }}>
