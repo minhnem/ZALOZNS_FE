@@ -39,7 +39,7 @@ export default function AutomationPage() {
       const res = await handleAPI('/api/campaigns', null, 'get');
       if (res) {
         setCampaigns(res);
-        setActiveCampaigns(res.filter(c => c.status === 'active' && c.is_auto_run));
+        setActiveCampaigns(res.filter(c => c.status === 'active' && (c.is_auto_run || c.type === 'MASTER_CAMPAIGN')));
       }
     } catch (error) {
       messageApi.error('Lấy dữ liệu chiến dịch thất bại');
