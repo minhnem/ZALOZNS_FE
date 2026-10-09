@@ -251,13 +251,38 @@ export default function ReportsPage() {
             const x = 40 + gap + idx * (groupWidth + gap);
             const successHeight = (d.success / maxVal) * chartHeight;
             const failedHeight = (d.failed / maxVal) * chartHeight;
+            
+            const tooltipContent = (
+              <div style={{ padding: '4px 8px', minWidth: 160 }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>{d.date}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#10b981' }} />
+                    <span style={{ fontSize: 12 }}>Thành công</span>
+                  </div>
+                  <span style={{ fontWeight: 'bold', fontSize: 13 }}>{d.success || 0}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#ef4444' }} />
+                    <span style={{ fontSize: 12 }}>Thất bại</span>
+                  </div>
+                  <span style={{ fontWeight: 'bold', fontSize: 13 }}>{d.failed || 0}</span>
+                </div>
+              </div>
+            );
 
             return (
-              <g key={idx}>
-                <rect x={x} y={chartHeight - successHeight} width={barWidth} height={successHeight} fill="#10b981" rx="2" />
-                <rect x={x + barWidth + 4} y={chartHeight - failedHeight} width={barWidth} height={failedHeight} fill="#ef4444" rx="2" />
-                <text x={x + barWidth} y={chartHeight + 20} textAnchor="middle" fill="#6b7280" fontSize="11">{d.date}</text>
-              </g>
+              <Tooltip key={idx} title={tooltipContent} color="#1f2937" placement="right">
+                <g style={{ cursor: 'pointer', transition: 'opacity 0.3s' }}>
+                  {/* Vùng vô hình để bắt sự kiện hover tốt hơn cho cả 2 cột */}
+                  <rect x={x - gap / 4} y={10} width={groupWidth + gap / 2} height={chartHeight} fill="transparent" />
+                  
+                  <rect x={x} y={chartHeight - successHeight} width={barWidth} height={successHeight} fill="#10b981" rx="2" />
+                  <rect x={x + barWidth + 4} y={chartHeight - failedHeight} width={barWidth} height={failedHeight} fill="#ef4444" rx="2" />
+                  <text x={x + barWidth} y={chartHeight + 20} textAnchor="middle" fill="#6b7280" fontSize="11">{d.date}</text>
+                </g>
+              </Tooltip>
             );
           })}
           <line x1="40" y1={chartHeight} x2={chartWidth + 40} y2={chartHeight} stroke="#e5e7eb" strokeWidth="1" />

@@ -76,7 +76,7 @@ export default function LoginPage() {
               Chào mừng trở lại
             </Title>
             <Text type="secondary" style={{ fontSize: 14 }}>
-              Đăng nhập để quản lý dự án của bạn.
+              Đăng nhập để quản lý shop của bạn.
             </Text>
           </div>
 
@@ -122,10 +122,18 @@ export default function LoginPage() {
             </Form.Item>
           </Form>
 
-          <div className={styles.mobyForgotWrapper}>
-            <a href="#forgot-password" className={styles.mobyForgotLink}>
-              Quên mật khẩu?
-            </a>
+          <div className={styles.mobyForgotWrapper} style={{ textAlign: 'center', marginTop: 16, lineHeight: 1.6 }}>
+            <Text type="secondary" style={{ fontSize: 14 }}>
+              Bạn chưa có tài khoản hoặc quên mật khẩu?<br />
+              <a 
+                href="https://zalo.me/0941231116" 
+                target="_blank" 
+                rel="noreferrer" 
+                style={{ color: '#0d6e57', fontWeight: 600, display: 'inline-block', marginTop: 4 }}
+              >
+                Liên hệ quản trị viên
+              </a>
+            </Text>
           </div>
         </div>
       </div>

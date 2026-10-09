@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Card, Table, Tag, Space, Button, Select, App, Row, Col, Statistic, Layout, Modal, Form, Input, Result, Descriptions, Popconfirm } from 'antd';
 import { ShopOutlined, UserOutlined, MessageOutlined, ShoppingCartOutlined, LogoutOutlined, PlusOutlined, CopyOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
-import { useDispatch } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../features/auth/authSlice';
 import axiosClient from '../../apis/axiosClient';
 
@@ -29,6 +29,12 @@ export default function SuperAdminDashboard() {
   const [editLoading, setEditLoading] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
   const [editForm] = Form.useForm();
+
+  // State cho Đổi mật khẩu cá nhân
+  const { user } = useSelector((state) => state.auth);
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordForm] = Form.useForm();
 
   const fetchData = async () => {
     try {
@@ -120,9 +126,8 @@ export default function SuperAdminDashboard() {
       address: record.address,
       plan: record.plan,
       status: record.status,
-      max_users: record.max_users,
-      max_customers: record.max_customers,
-      max_zns_per_month: record.max_zns_per_month,
+      email: record.owner_id?.email || '',
+      password: '', // Để trống, khi nào admin nhập mới đổi
     });
     setIsEditModalVisible(true);
   };
@@ -155,6 +160,34 @@ export default function SuperAdminDashboard() {
     } catch (error) {
       message.error(error?.message || 'Lỗi khi xoá Shop');
     }
+  };
+
+  // === Xử lý đổi mật khẩu cá nhân ===
+  const handleChangePassword = async (values) => {
+    if (!user) return;
+    setPasswordLoading(true);
+    try {
+      const userId = user._id || user.id;
+      await axiosClient.put(`/api/auth/change-password/${userId}`, {
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword
+      });
+      message.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
+      setIsPasswordModalVisible(false);
+      passwordForm.resetFields();
+      setTimeout(() => {
+        handleLogout();
+      }, 1500);
+    } catch (error) {
+      message.error(error?.response?.data?.message || error?.message || 'Lỗi khi đổi mật khẩu');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleClosePasswordModal = () => {
+    setIsPasswordModalVisible(false);
+    passwordForm.resetFields();
   };
 
   const columns = [
@@ -257,9 +290,14 @@ export default function SuperAdminDashboard() {
             Super Admin Dashboard
           </Title>
         </div>
-        <Button type="primary" danger icon={<LogoutOutlined />} onClick={handleLogout} style={{ borderRadius: 6 }}>
-          Đăng xuất
-        </Button>
+        <Space>
+          <Button onClick={() => setIsPasswordModalVisible(true)} style={{ borderRadius: 6, fontWeight: 600 }}>
+            Đổi mật khẩu
+          </Button>
+          <Button type="primary" danger icon={<LogoutOutlined />} onClick={handleLogout} style={{ borderRadius: 6 }}>
+            Đăng xuất
+          </Button>
+        </Space>
       </Header>
       
       <Content style={{ padding: '24px 50px' }}>
@@ -540,19 +578,14 @@ export default function SuperAdminDashboard() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label={<span style={{ fontWeight: 600 }}>Giới hạn User</span>} name="max_users">
-                <Input type="number" size="large" />
+            <Col span={12}>
+              <Form.Item label={<span style={{ fontWeight: 600 }}>Email đăng nhập (Chủ shop)</span>} name="email">
+                <Input size="large" placeholder="Nhập email mới nếu muốn đổi" />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item label={<span style={{ fontWeight: 600 }}>Giới hạn KH</span>} name="max_customers">
-                <Input type="number" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label={<span style={{ fontWeight: 600 }}>Giới hạn ZNS</span>} name="max_zns_per_month">
-                <Input type="number" size="large" />
+            <Col span={12}>
+              <Form.Item label={<span style={{ fontWeight: 600 }}>Đổi mật khẩu mới</span>} name="password">
+                <Input.Password size="large" placeholder="Để trống nếu không đổi mật khẩu" />
               </Form.Item>
             </Col>
           </Row>
@@ -568,6 +601,76 @@ export default function SuperAdminDashboard() {
                 style={{ background: '#0d6e57', borderColor: '#0d6e57', fontWeight: 600 }}
               >
                 Lưu thay đổi
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Đổi mật khẩu */}
+      <Modal
+        title="🔒 Đổi mật khẩu cá nhân"
+        open={isPasswordModalVisible}
+        onCancel={handleClosePasswordModal}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handleChangePassword}
+          requiredMark={false}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            label={<span style={{ fontWeight: 600 }}>Mật khẩu hiện tại</span>}
+            name="oldPassword"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+          >
+            <Input.Password size="large" placeholder="Nhập mật khẩu cũ" />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ fontWeight: 600 }}>Mật khẩu mới</span>}
+            name="newPassword"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+              { min: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự' }
+            ]}
+          >
+            <Input.Password size="large" placeholder="Nhập mật khẩu mới" />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ fontWeight: 600 }}>Xác nhận mật khẩu mới</span>}
+            name="confirmPassword"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password size="large" placeholder="Nhập lại mật khẩu mới" />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <Space>
+              <Button size="large" onClick={handleClosePasswordModal}>Hủy bỏ</Button>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                size="large" 
+                loading={passwordLoading}
+                style={{ background: '#0d6e57', borderColor: '#0d6e57', fontWeight: 600 }}
+              >
+                Cập nhật mật khẩu
               </Button>
             </Space>
           </Form.Item>

@@ -23,6 +23,7 @@ const UsersPage = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [babyInputType, setBabyInputType] = useState('dob');
+  const [stageType, setStageType] = useState('none');
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
 
@@ -135,6 +136,13 @@ const UsersPage = () => {
     };
 
     setBabyInputType('dob');
+    if (record.baby_dob) {
+      setStageType('born');
+    } else if (record.edd) {
+      setStageType('pregnant');
+    } else {
+      setStageType('none');
+    }
     form.setFieldsValue(formValues);
     setIsModalVisible(true);
   };
@@ -154,6 +162,7 @@ const UsersPage = () => {
     setIsModalVisible(false);
     form.resetFields();
     setBabyInputType('dob');
+    setStageType('none');
     setEditingId(null);
   };
 
@@ -217,6 +226,7 @@ const UsersPage = () => {
       setIsModalVisible(false);
       form.resetFields();
       setBabyInputType('dob');
+      setStageType('none');
       setEditingId(null);
       fetchCustomers();
     } catch (error) {
@@ -515,63 +525,90 @@ const UsersPage = () => {
               </Select>
             </Form.Item>
 
-            <div className="col-span-1 md:col-span-2 bg-gray-50 p-4 rounded border border-gray-200">
-              <div className="mb-2 font-medium text-gray-700">Thông tin sinh của bé (Đã sinh)</div>
-
-              <Form.Item name="babyInputType" initialValue="dob" className="mb-3">
-                <Radio.Group onChange={(e) => setBabyInputType(e.target.value)} value={babyInputType}>
-                  <Radio value="dob">Biết ngày sinh</Radio>
-                  <Radio value="days">Nhập ngày tuổi</Radio>
-                  <Radio value="weeks">Nhập tuần tuổi</Radio>
-                  <Radio value="months">Nhập tháng tuổi</Radio>
+            <div className="col-span-1 md:col-span-2">
+              <Form.Item label="Giai đoạn của khách hàng" className="mb-2">
+                <Radio.Group 
+                  value={stageType} 
+                  onChange={(e) => {
+                    setStageType(e.target.value);
+                    if (e.target.value === 'born') {
+                      form.setFieldsValue({ pregnancy_weeks: null });
+                    } else if (e.target.value === 'pregnant') {
+                      form.setFieldsValue({ baby_dob: null, baby_days: null, baby_weeks: null, baby_months: null });
+                    } else {
+                      form.setFieldsValue({ pregnancy_weeks: null, baby_dob: null, baby_days: null, baby_weeks: null, baby_months: null });
+                    }
+                  }} 
+                  buttonStyle="solid"
+                >
+                  <Radio.Button value="none">Chưa xác định</Radio.Button>
+                  <Radio.Button value="pregnant">Đang mang bầu</Radio.Button>
+                  <Radio.Button value="born">Đã sinh bé</Radio.Button>
                 </Radio.Group>
               </Form.Item>
-
-              {babyInputType === 'dob' ? (
-                <Form.Item
-                  name="baby_dob"
-                  label="Ngày sinh"
-                  className="mb-0"
-                >
-                  <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh..." />
-                </Form.Item>
-              ) : babyInputType === 'days' ? (
-                <Form.Item
-                  name="baby_days"
-                  label="Ngày tuổi hiện tại"
-                  className="mb-0"
-                >
-                  <InputNumber min={0} max={1000} style={{ width: '100%' }} placeholder="Nhập số ngày tuổi..." addonAfter="ngày" />
-                </Form.Item>
-              ) : babyInputType === 'weeks' ? (
-                <Form.Item
-                  name="baby_weeks"
-                  label="Tuần tuổi hiện tại"
-                  className="mb-0"
-                >
-                  <InputNumber min={0} max={200} style={{ width: '100%' }} placeholder="Nhập số tuần tuổi..." addonAfter="tuần" />
-                </Form.Item>
-              ) : (
-                <Form.Item
-                  name="baby_months"
-                  label="Tháng tuổi hiện tại"
-                  className="mb-0"
-                >
-                  <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="Nhập số tháng tuổi..." addonAfter="tháng" />
-                </Form.Item>
-              )}
             </div>
 
-            <div className="col-span-1 md:col-span-2 bg-gray-50 p-4 rounded border border-gray-200">
-              <div className="mb-2 font-medium text-gray-700">Thông tin thai kỳ (Đang bầu)</div>
-              <Form.Item
-                name="pregnancy_weeks"
-                label="Tuần thai hiện tại"
-                className="mb-0"
-              >
-                <InputNumber min={0} max={42} style={{ width: '100%' }} placeholder="Nhập số tuần thai..." addonAfter="tuần" />
-              </Form.Item>
-            </div>
+            {stageType === 'born' && (
+              <div className="col-span-1 md:col-span-2 bg-gray-50 p-4 rounded border border-gray-200">
+                <div className="mb-2 font-medium text-gray-700">Thông tin sinh của bé (Đã sinh)</div>
+
+                <Form.Item name="babyInputType" initialValue="dob" className="mb-3">
+                  <Radio.Group onChange={(e) => setBabyInputType(e.target.value)} value={babyInputType}>
+                    <Radio value="dob">Biết ngày sinh</Radio>
+                    <Radio value="days">Nhập ngày tuổi</Radio>
+                    <Radio value="weeks">Nhập tuần tuổi</Radio>
+                    <Radio value="months">Nhập tháng tuổi</Radio>
+                  </Radio.Group>
+                </Form.Item>
+
+                {babyInputType === 'dob' ? (
+                  <Form.Item
+                    name="baby_dob"
+                    label="Ngày sinh"
+                    className="mb-0"
+                  >
+                    <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh..." />
+                  </Form.Item>
+                ) : babyInputType === 'days' ? (
+                  <Form.Item
+                    name="baby_days"
+                    label="Ngày tuổi hiện tại"
+                    className="mb-0"
+                  >
+                    <InputNumber min={0} max={1000} style={{ width: '100%' }} placeholder="Nhập số ngày tuổi..." addonAfter="ngày" />
+                  </Form.Item>
+                ) : babyInputType === 'weeks' ? (
+                  <Form.Item
+                    name="baby_weeks"
+                    label="Tuần tuổi hiện tại"
+                    className="mb-0"
+                  >
+                    <InputNumber min={0} max={200} style={{ width: '100%' }} placeholder="Nhập số tuần tuổi..." addonAfter="tuần" />
+                  </Form.Item>
+                ) : (
+                  <Form.Item
+                    name="baby_months"
+                    label="Tháng tuổi hiện tại"
+                    className="mb-0"
+                  >
+                    <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="Nhập số tháng tuổi..." addonAfter="tháng" />
+                  </Form.Item>
+                )}
+              </div>
+            )}
+
+            {stageType === 'pregnant' && (
+              <div className="col-span-1 md:col-span-2 bg-gray-50 p-4 rounded border border-gray-200">
+                <div className="mb-2 font-medium text-gray-700">Thông tin thai kỳ (Đang bầu)</div>
+                <Form.Item
+                  name="pregnancy_weeks"
+                  label="Tuần thai hiện tại"
+                  className="mb-0"
+                >
+                  <InputNumber min={0} max={42} style={{ width: '100%' }} placeholder="Nhập số tuần thai..." addonAfter="tuần" />
+                </Form.Item>
+              </div>
+            )}
 
             <div className="col-span-1 md:col-span-2 bg-blue-50 p-4 rounded border border-blue-200">
               <div className="mb-2 font-medium text-blue-800">Sản phẩm khách đã mua (Tùy chọn)</div>
