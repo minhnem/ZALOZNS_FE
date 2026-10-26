@@ -12,7 +12,11 @@ import {
   FaSignOutAlt,
   FaDatabase,
   FaFileAlt,
-  FaBox
+  FaBox,
+  FaWarehouse,
+  FaTruck,
+  FaClipboardList,
+  FaCashRegister
 } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -69,9 +73,43 @@ const DashboardLayout = ({ children, title = 'MobyFlow' }) => {
       label: <span style={{ fontWeight: 500 }}>Quản lý dữ liệu</span>,
     },
     hasPermission(user, 'data_view') && {
-      key: '/products',
+      key: '/pos',
+      icon: <FaCashRegister size={18} />,
+      label: <span style={{ fontWeight: 600, color: '#0d6e57' }}>Bán hàng (POS)</span>,
+    },
+    hasPermission(user, 'data_view') && {
+      key: 'product-group',
       icon: <FaBox size={18} />,
-      label: <span style={{ fontWeight: 500 }}>Sản phẩm & Chu kỳ</span>,
+      label: <span style={{ fontWeight: 500 }}>Quản lý Sản phẩm</span>,
+      children: [
+        {
+          key: '/products',
+          label: 'Sản phẩm & Lô hàng',
+        },
+        {
+          key: '/categories',
+          label: 'Danh mục',
+        }
+      ]
+    },
+    hasPermission(user, 'data_view') && {
+      key: 'inventory-group',
+      icon: <FaWarehouse size={18} />,
+      label: <span style={{ fontWeight: 500 }}>Quản lý Kho</span>,
+      children: [
+        {
+          key: '/purchase-orders',
+          label: 'Nhập kho',
+        },
+        {
+          key: '/suppliers',
+          label: 'Nhà cung cấp',
+        },
+        {
+          key: '/inventory',
+          label: 'Sổ kho & Kiểm kê',
+        }
+      ]
     },
 
     hasPermission(user, 'campaign_view') && {

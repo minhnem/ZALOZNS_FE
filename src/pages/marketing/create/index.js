@@ -48,7 +48,7 @@ export default function CreateCampaignPage() {
   };
 
   const { message: messageApi, modal } = App.useApp();
-  const { edit, view, clone } = router.query; 
+  const { edit, view, clone, clearance, productId, productName, batchNumber } = router.query; 
   const isViewMode = !!view;
   const campaignIdToFetch = edit || view || clone;
   const [form] = Form.useForm();
@@ -103,6 +103,29 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     if (campaignIdToFetch) {
       fetchCampaignDetails(campaignIdToFetch);
+    } else if (clearance === '1') {
+      // Tự động điền dữ liệu cho chiến dịch xả hàng cận date
+      const pName = productName || 'Sản phẩm';
+      const bText = batchNumber ? ` (Lô ${batchNumber})` : '';
+      form.setFieldsValue({
+        name: `[Xả hàng Cận Date] ${pName}${bText}`,
+        type: 'PROMOTION',
+        status: 'active',
+        is_auto_run: false,
+        product_id: productId || 'all',
+        target_audience: {
+          audience_type: productId ? 'BOUGHT_PRODUCT' : 'ALL',
+          product_id: productId || undefined
+        },
+        dynamic_data: {
+          note: 'Ưu đãi xả hàng cận date giá đặc biệt cho khách hàng thân thiết'
+        },
+        milestones: [],
+        sub_events: [],
+        refill_reminder_days: 0,
+        exclude_refill_today: false
+      });
+      messageApi.info('Đã chuẩn bị sẵn mẫu chiến dịch Xả Hàng Cận Date');
     } else {
       form.setFieldsValue({
         status: 'active',
@@ -116,7 +139,7 @@ export default function CreateCampaignPage() {
         exclude_refill_today: false
       });
     }
-  }, [edit, view, clone]);
+  }, [edit, view, clone, clearance, productId, productName, batchNumber]);
 
   // When templateId changes, find the selected template
   useEffect(() => {

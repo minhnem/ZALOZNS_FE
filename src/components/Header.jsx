@@ -1,21 +1,15 @@
 import React from 'react';
-import { Layout, Input, Badge, Avatar, Dropdown } from 'antd';
+import { Layout, Avatar, Button } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { FaSearch, FaBell } from 'react-icons/fa';
+import { FaCashRegister } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
+import { useRouter } from 'next/router';
 
 const { Header: AntdHeader } = Layout;
 
 const Header = () => {
   const { user } = useSelector((state) => state.auth);
-
-  const notificationMenu = [
-    {
-      key: '1',
-      label: 'Không có thông báo mới',
-      disabled: true,
-    }
-  ];
+  const router = useRouter();
 
   return (
     <AntdHeader 
@@ -33,12 +27,28 @@ const Header = () => {
         zIndex: 10
       }}
     >
-      {/* Search Bar - Removed */}
+      {/* Left spacer */}
       <div style={{ flex: 1 }}></div>
 
       {/* Right Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-        
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <Button
+          type="primary"
+          icon={<FaCashRegister style={{ marginRight: 4 }} />}
+          onClick={() => router.push('/pos')}
+          style={{
+            background: '#0d6e57',
+            borderColor: '#0d6e57',
+            fontWeight: 600,
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            boxShadow: '0 2px 4px rgba(13, 110, 87, 0.2)'
+          }}
+        >
+          Bán hàng POS
+        </Button>
+
         <div style={{ cursor: 'pointer' }}>
           <Avatar 
             size={36} 

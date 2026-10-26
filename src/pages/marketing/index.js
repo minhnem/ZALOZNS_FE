@@ -43,6 +43,9 @@ export default function MarketingPage() {
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   useEffect(() => {
     fetchCampaigns();
   }, []);
@@ -75,9 +78,25 @@ export default function MarketingPage() {
     try {
       await handleAPI(`/api/campaigns/${id}`, null, 'delete');
       messageApi.success('Đã xóa chiến dịch!');
+      setSelectedRowKeys(prev => prev.filter(k => k !== id));
       fetchCampaigns();
     } catch (error) {
       messageApi.error('Lỗi khi xóa chiến dịch');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedRowKeys.length) return;
+    setBulkDeleting(true);
+    try {
+      const res = await handleAPI('/api/campaigns/bulk-delete', { ids: selectedRowKeys }, 'post');
+      messageApi.success(res?.message || `Đã xóa ${selectedRowKeys.length} chiến dịch thành công`);
+      setSelectedRowKeys([]);
+      fetchCampaigns();
+    } catch (error) {
+      messageApi.error(error?.response?.data?.message || 'Có lỗi xảy ra khi xóa nhiều chiến dịch');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -312,10 +331,33 @@ export default function MarketingPage() {
                 Hủy lọc
               </Button>
             )}
+
+            {selectedRowKeys.length > 0 && hasPermission(user, 'campaign_delete') && (
+              <Popconfirm
+                title={`Bạn có chắc chắn muốn xóa ${selectedRowKeys.length} chiến dịch đã chọn?`}
+                onConfirm={handleBulkDelete}
+                okText="Xóa tất cả"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true, loading: bulkDeleting }}
+              >
+                <Button 
+                  danger 
+                  type="primary"
+                  icon={<DeleteOutlined />} 
+                  loading={bulkDeleting}
+                >
+                  Xóa ({selectedRowKeys.length}) chiến dịch đã chọn
+                </Button>
+              </Popconfirm>
+            )}
           </div>
 
           {/* Table Section */}
           <Table 
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys)
+            }}
             columns={columns} 
             dataSource={filteredCampaigns}
             loading={loading}

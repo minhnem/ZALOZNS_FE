@@ -36,6 +36,7 @@ import DashboardLayout from '../../layouts/DashboardLayout';
 import handleAPI from '../../apis/handleAPI';
 import { useSelector } from 'react-redux';
 import { hasPermission } from '../../utils/hasPermission';
+import { useRouter } from 'next/router';
 
 const { Title, Text } = Typography;
 
@@ -197,6 +198,7 @@ const MiniSparkline = ({ color = '#0d6e57', trend = 'up' }) => {
 export default function DashboardPage() {
   const { user } = useSelector((state) => state.auth);
   const { message: messageApi } = App.useApp();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -556,6 +558,50 @@ export default function DashboardPage() {
               }}
               bodyStyle={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
             >
+              {/* Widget Cảnh Báo Rủi Ro Hạn Sử Dụng */}
+              {dashboardData?.expirySummary && (dashboardData.expirySummary.expiredCount > 0 || dashboardData.expirySummary.nearExpiry30Count > 0) && (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #fffbeb 0%, #fef2f2 100%)',
+                    border: '1px solid #fecaca',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.08)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <WarningOutlined style={{ color: '#ef4444', fontSize: 16 }} />
+                    <Text strong style={{ color: '#991b1b', fontSize: 13, textTransform: 'uppercase' }}>
+                      Rủi Ro Hạn Sử Dụng
+                    </Text>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#374151', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {dashboardData.expirySummary.expiredCount > 0 && (
+                      <div style={{ color: '#dc2626', fontWeight: 600 }}>
+                        • <strong>{dashboardData.expirySummary.expiredCount}</strong> lô đã hết hạn ({dashboardData.expirySummary.expiredRiskValue.toLocaleString('vi-VN')} đ)
+                      </div>
+                    )}
+                    {dashboardData.expirySummary.nearExpiry30Count > 0 && (
+                      <div style={{ color: '#d97706', fontWeight: 600 }}>
+                        • <strong>{dashboardData.expirySummary.nearExpiry30Count}</strong> lô cận date ≤ 30 ngày ({dashboardData.expirySummary.nearExpiry30RiskValue.toLocaleString('vi-VN')} đ)
+                      </div>
+                    )}
+                    <div style={{ marginTop: 4, fontWeight: 700, color: '#1f2937' }}>
+                      Vốn rủi ro: <span style={{ color: '#dc2626' }}>{dashboardData.expirySummary.totalRiskValue.toLocaleString('vi-VN')} đ</span>
+                    </div>
+                  </div>
+                  <Button
+                    size="small"
+                    type="primary"
+                    danger
+                    style={{ width: '100%', borderRadius: 6, fontWeight: 600, marginTop: 10 }}
+                    onClick={() => router.push('/products?tab=batches&filterStatus=near_expiry')}
+                  >
+                    Xử Lý Lô Cận Date & Xả Hàng
+                  </Button>
+                </div>
+              )}
+
               {dashboardData?.alerts?.length > 0 ? dashboardData.alerts.map((alert, idx) => (
                 <div
                   key={idx}
@@ -570,7 +616,19 @@ export default function DashboardPage() {
                     whiteSpace: 'pre-line'
                   }}
                 >
-                  {alert.message}
+                  <div>{alert.message}</div>
+                  {alert.actionUrl && (
+                    <div style={{ marginTop: 8 }}>
+                      <Button
+                        size="small"
+                        type="link"
+                        style={{ padding: 0, height: 'auto', fontWeight: 600, color: alert.type === 'error' ? '#dc2626' : '#0d6e57', fontSize: 12 }}
+                        onClick={() => router.push(alert.actionUrl)}
+                      >
+                        Xem chi tiết & Xử lý →
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )) : (
                 <>

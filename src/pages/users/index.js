@@ -21,6 +21,8 @@ const UsersPage = () => {
   const [filterStage, setFilterStage] = useState('all');
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [babyInputType, setBabyInputType] = useState('dob');
   const [stageType, setStageType] = useState('none');
@@ -54,7 +56,7 @@ const UsersPage = () => {
         const res = await handleAPI('/api/customers/import', formData, 'post', {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        messageApi.success(`Import thành công! Đã xử lý: ${res?.data?.totalRowsProcessed || 0} dòng. Khách mới: ${res?.data?.newCustomers || 0}, Đơn mới: ${res?.data?.newOrders || 0}.`);
+        messageApi.success(res?.message || `Import thành công! Đã xử lý: ${res?.data?.totalRowsProcessed || 0} dòng.`);
         onSuccess(res, file);
         setIsImportModalVisible(false);
         fetchCustomers();
@@ -151,10 +153,28 @@ const UsersPage = () => {
     try {
       await handleAPI(`/api/customers/${id}`, null, 'delete');
       messageApi.success('Xóa dữ liệu thành công!');
+      setSelectedRowKeys((prev) => prev.filter((k) => k !== id));
       fetchCustomers();
     } catch (error) {
       const msg = typeof error === 'string' ? error : (error?.message || 'Lỗi khi xóa dữ liệu');
       messageApi.error(msg);
+    }
+  };
+
+  const handleBulkDeleteCustomers = async () => {
+    if (selectedRowKeys.length === 0) return;
+    setBulkDeleteLoading(true);
+    try {
+      const res = await handleAPI('/api/customers/bulk-delete', { ids: selectedRowKeys }, 'post');
+      messageApi.success(res?.message || `Đã xóa ${selectedRowKeys.length} khách hàng!`);
+      setSelectedRowKeys([]);
+      fetchCustomers();
+    } catch (error) {
+      console.error(error);
+      const msg = typeof error === 'string' ? error : error?.message || 'Lỗi khi xóa nhiều khách hàng';
+      messageApi.error(msg);
+    } finally {
+      setBulkDeleteLoading(false);
     }
   };
 
@@ -467,12 +487,32 @@ const UsersPage = () => {
               Hủy lọc
             </Button>
           )}
+
+          {hasPermission(user, 'data_delete') && selectedRowKeys.length > 0 && (
+            <Popconfirm
+              title={`Xác nhận xóa ${selectedRowKeys.length} khách hàng đã chọn?`}
+              description="Hành động này sẽ xóa các khách hàng được chọn và đơn hàng liên quan."
+              onConfirm={handleBulkDeleteCustomers}
+              okText="Xóa tất cả"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true, loading: bulkDeleteLoading }}
+            >
+              <Button danger type="primary" icon={<DeleteOutlined />}>
+                Xóa ({selectedRowKeys.length}) khách hàng đã chọn
+              </Button>
+            </Popconfirm>
+          )}
         </div>
 
         <Table
           columns={columns}
           dataSource={filteredData}
+          rowKey="_id"
           loading={loading}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys
+          }}
           pagination={{ pageSize: 10 }}
           scroll={{ x: 1000 }}
         />
