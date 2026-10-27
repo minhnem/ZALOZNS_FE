@@ -6,7 +6,9 @@ import axios from 'axios';
  * @param {string} defaultFilename - Tên file khi tải về máy
  */
 export const downloadExcel = async (endpoint, defaultFilename = 'data.xlsx') => {
-  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const baseURL = (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? `http://${window.location.hostname}:3001`
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001');
   let token = null;
 
   if (typeof window !== 'undefined') {

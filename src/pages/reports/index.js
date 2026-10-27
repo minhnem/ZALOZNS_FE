@@ -186,7 +186,9 @@ export default function ReportsPage() {
       setExportLoading(true);
       const startStr = dateRange?.[0] ? dateRange[0].toISOString() : '';
       const endStr = dateRange?.[1] ? dateRange[1].toISOString() : '';
-      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const baseURL = (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+        ? `http://${window.location.hostname}:3001`
+        : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001');
 
       const typeMap = {
         sales: 'sales',

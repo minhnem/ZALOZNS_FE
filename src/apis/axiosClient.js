@@ -2,15 +2,22 @@ import axios from 'axios'
 import queryString from 'query-string'
 import { message } from 'antd'
 
-const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-// const baseURL = 'https://api.truenet.vn'
+export const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return `http://${window.location.hostname}:3001`;
+    }
+    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+};
 
 const axiosClient = axios.create({
-    baseURL: baseURL,
+    baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001',
     paramsSerializer: (params) => queryString.stringify(params)
 })
 
 axiosClient.interceptors.request.use(async (config) => {
+    if (typeof window !== 'undefined') {
+        config.baseURL = getApiBaseUrl();
+    }
     let token = null;
     if (typeof window !== 'undefined') {
         try {
