@@ -22,7 +22,8 @@ import {
   DatePicker,
   Progress,
   Divider,
-  Alert
+  Alert,
+  Upload
 } from 'antd';
 import {
   PlusOutlined,
@@ -41,11 +42,16 @@ import {
   FilterOutlined,
   StopOutlined,
   InfoCircleOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  FileExcelOutlined,
+  UploadOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
 import handleAPI from '../../apis/handleAPI';
+import axiosClient from '../../apis/axiosClient';
+import { downloadExcel } from '../../utils/downloadExcel';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useSelector } from 'react-redux';
 import { hasPermission } from '../../utils/hasPermission';
@@ -96,6 +102,9 @@ export default function ProductsPage() {
   const [scanningExpiry, setScanningExpiry] = useState(false);
   const [selectedBatchKeys, setSelectedBatchKeys] = useState([]);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
 
   // Expiry overview state
   const [expiryStats, setExpiryStats] = useState(null);
@@ -104,6 +113,55 @@ export default function ProductsPage() {
 
   const [formProduct] = Form.useForm();
   const [formBatch] = Form.useForm();
+
+  // Xuất toàn bộ thông tin sản phẩm và chi tiết lô hàng ra file Excel
+  const handleExportExcel = async () => {
+    setExportLoading(true);
+    try {
+      const filename = `Danh_Sach_San_Pham_Va_Lo_Hang_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
+      await downloadExcel('/api/products/export-excel', filename);
+      messageApi.success('Đã xuất file Excel Sản phẩm & Lô hàng thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel sản phẩm:', error);
+      messageApi.error(error.message || 'Không thể xuất file Excel. Vui lòng thử lại.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Tải file Excel mẫu để nhập sản phẩm
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadExcel('/api/products/template', 'Mau_Nhap_San_Pham.xlsx');
+      messageApi.success('Đã tải file Excel mẫu sản phẩm thành công!');
+    } catch (error) {
+      console.error('Lỗi khi tải file mẫu:', error);
+      messageApi.error(error.message || 'Không thể tải file mẫu. Vui lòng thử lại.');
+    }
+  };
+
+  // Nhập sản phẩm từ file Excel tải lên
+  const handleCustomImport = async ({ file, onSuccess, onError }) => {
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await handleAPI('/api/products/import', formData, 'post');
+      messageApi.success(res?.message || 'Nhập sản phẩm từ file Excel thành công!');
+      setIsImportModalVisible(false);
+      fetchProducts();
+      fetchBatches();
+      fetchExpiryOverview();
+      onSuccess(res, file);
+    } catch (error) {
+      console.error('Lỗi import sản phẩm:', error);
+      const msg = typeof error === 'string' ? error : error?.message || 'Lỗi khi nhập file Excel';
+      messageApi.error(msg);
+      onError(error);
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   // Load products on mount
   useEffect(() => {
@@ -1028,6 +1086,35 @@ export default function ProductsPage() {
         </div>
 
         <Space size="middle">
+          {hasPermission(user, 'data_view') && (
+            <Button
+              icon={<FileExcelOutlined />}
+              onClick={handleExportExcel}
+              loading={exportLoading}
+              style={{
+                borderColor: '#10b981',
+                color: '#0d6e57',
+                fontWeight: 600
+              }}
+            >
+              Xuất Excel
+            </Button>
+          )}
+
+          {hasPermission(user, 'data_create') && (
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setIsImportModalVisible(true)}
+              style={{
+                borderColor: '#0284c7',
+                color: '#0369a1',
+                fontWeight: 600
+              }}
+            >
+              Nhập Excel
+            </Button>
+          )}
+
           {activeTab === 'batches' && (
             <>
               <Button
@@ -1891,6 +1978,80 @@ export default function ProductsPage() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* MODAL: NHẬP SẢN PHẨM TỪ FILE EXCEL */}
+      <Modal
+        title={
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
+            Nhập Sản Phẩm Hàng Loạt Từ File Excel
+          </div>
+        }
+        open={isImportModalVisible}
+        onCancel={() => setIsImportModalVisible(false)}
+        footer={null}
+        width={650}
+      >
+        <div style={{ marginTop: 12 }}>
+          <Alert
+            message="Hướng dẫn chuẩn bị dữ liệu"
+            description={
+              <div>
+                <p style={{ margin: '4px 0' }}>
+                  1. Tải file Excel mẫu chuẩn bên dưới để xem định dạng các cột và ví dụ cụ thể.
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  2. Cột <strong>Tên sản phẩm (*)</strong> là bắt buộc.
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  3. Nếu có <strong>Tồn kho ban đầu</strong> &gt; 0, hệ thống sẽ tự động tạo lô hàng và ghi Sổ kho ban đầu cho sản phẩm.
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  4. Định dạng ngày tháng: <strong>DD/MM/YYYY</strong> (Ví dụ: <code>15/10/2026</code>).
+                </p>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontWeight: 600, color: '#374151' }}>File mẫu chuẩn hệ thống:</span>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTemplate}
+              style={{
+                background: '#0284c7',
+                borderColor: '#0284c7',
+                fontWeight: 600
+              }}
+            >
+              Tải File Excel Mẫu (.xlsx)
+            </Button>
+          </div>
+
+          <Upload.Dragger
+            name="file"
+            multiple={false}
+            accept=".xlsx, .xls"
+            customRequest={handleCustomImport}
+            showUploadList={false}
+            disabled={importLoading}
+            style={{ padding: 20, background: '#fafafa' }}
+          >
+            <p className="ant-upload-drag-icon" style={{ fontSize: 44, color: '#0284c7', marginBottom: 12 }}>
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text" style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>
+              Kéo thả file Excel vào đây, hoặc bấm để chọn file từ máy tính
+            </p>
+            <p className="ant-upload-hint" style={{ fontSize: 13, color: '#6b7280' }}>
+              Hỗ trợ định dạng <strong>.xlsx</strong> hoặc <strong>.xls</strong>. Dữ liệu sẽ được tự động đồng bộ vào danh mục sản phẩm và kho hàng.
+            </p>
+          </Upload.Dragger>
+        </div>
       </Modal>
     </DashboardLayout>
   );

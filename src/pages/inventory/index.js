@@ -18,7 +18,9 @@ import {
   Tooltip,
   InputNumber,
   Divider,
-  Alert
+  Alert,
+  Drawer,
+  Badge
 } from 'antd';
 import {
   SearchOutlined,
@@ -32,11 +34,18 @@ import {
   ArrowDownOutlined,
   DiffOutlined,
   DeleteOutlined,
-  StopOutlined
+  StopOutlined,
+  FileExcelOutlined,
+  PlusOutlined,
+  ClearOutlined,
+  CheckOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { FaWarehouse, FaClipboardList } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import handleAPI from '../../apis/handleAPI';
+import axiosClient from '../../apis/axiosClient';
+import { downloadExcel } from '../../utils/downloadExcel';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useSelector } from 'react-redux';
 import { hasPermission } from '../../utils/hasPermission';
@@ -74,6 +83,14 @@ export default function InventoryPage() {
   // Selected batch in modal to show current stock
   const [selectedBatchForAdjust, setSelectedBatchForAdjust] = useState(null);
   const [selectedBatchForDiscard, setSelectedBatchForDiscard] = useState(null);
+
+  // Bulk stocktaking (Phiếu kiểm kê nhiều sản phẩm)
+  const [isBulkStocktakingOpen, setIsBulkStocktakingOpen] = useState(false);
+  const [stocktakingReason, setStocktakingReason] = useState('Kiểm kê kho định kỳ');
+  const [stocktakingItems, setStocktakingItems] = useState([]);
+  const [stocktakingSubmitting, setStocktakingSubmitting] = useState(false);
+  const [selectedBatchToAdd, setSelectedBatchToAdd] = useState(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     fetchMovements();
@@ -168,6 +185,172 @@ export default function InventoryPage() {
       console.error(error);
       const msg = typeof error === 'string' ? error : error?.message || 'Có lỗi khi xuất hủy';
       messageApi.error(msg);
+    }
+  };
+
+  // Nạp toàn bộ các lô còn tồn kho vào bảng kiểm kê
+  const handleLoadAllBatchesToStocktaking = () => {
+    const activeBatches = batches.filter(b => b.status !== 'destroyed');
+    if (activeBatches.length === 0) {
+      messageApi.warning('Không có lô hàng nào để kiểm kê');
+      return;
+    }
+    const items = activeBatches.map(b => ({
+      key: b._id,
+      batch_id: b._id,
+      product_name: b.product_id?.name || 'Sản phẩm',
+      sku: b.product_id?.sku || '',
+      unit: b.product_id?.unit || 'Cái',
+      batch_number: b.batch_number,
+      expiry_date: b.expiry_date,
+      system_quantity: b.quantity_in_stock || 0,
+      actual_quantity: b.quantity_in_stock || 0,
+      cost_price: b.cost_price || 0,
+      notes: ''
+    }));
+    setStocktakingItems(items);
+    messageApi.success(`Đã thêm ${items.length} lô hàng vào phiếu kiểm kê!`);
+  };
+
+  // Thêm 1 lô hàng vào bảng kiểm kê
+  const handleAddBatchToStocktaking = (batchId) => {
+    if (!batchId) return;
+    const b = batches.find(item => item._id === batchId);
+    if (!b) return;
+    if (stocktakingItems.some(i => i.batch_id === batchId)) {
+      messageApi.warning('Lô hàng này đã có trong phiếu kiểm kê!');
+      return;
+    }
+    setStocktakingItems(prev => [
+      ...prev,
+      {
+        key: b._id,
+        batch_id: b._id,
+        product_name: b.product_id?.name || 'Sản phẩm',
+        sku: b.product_id?.sku || '',
+        unit: b.product_id?.unit || 'Cái',
+        batch_number: b.batch_number,
+        expiry_date: b.expiry_date,
+        system_quantity: b.quantity_in_stock || 0,
+        actual_quantity: b.quantity_in_stock || 0,
+        cost_price: b.cost_price || 0,
+        notes: ''
+      }
+    ]);
+    setSelectedBatchToAdd(null);
+  };
+
+  // Cập nhật số lượng thực tế kiểm đếm
+  const handleUpdateActualQuantity = (batchId, val) => {
+    setStocktakingItems(prev => prev.map(item => {
+      if (item.batch_id === batchId) {
+        return { ...item, actual_quantity: val !== null && val !== undefined ? Number(val) : 0 };
+      }
+      return item;
+    }));
+  };
+
+  // Cập nhật ghi chú từng dòng kiểm kê
+  const handleUpdateItemNotes = (batchId, text) => {
+    setStocktakingItems(prev => prev.map(item => {
+      if (item.batch_id === batchId) {
+        return { ...item, notes: text };
+      }
+      return item;
+    }));
+  };
+
+  // Xóa 1 dòng khỏi bảng kiểm kê
+  const handleRemoveStocktakingItem = (batchId) => {
+    setStocktakingItems(prev => prev.filter(i => i.batch_id !== batchId));
+  };
+
+  // Thống kê tổng hợp realtime của phiếu kiểm kê
+  const stocktakingStats = useMemo(() => {
+    let matched = 0;
+    let surplus = 0;
+    let surplusQty = 0;
+    let surplusValue = 0;
+    let deficit = 0;
+    let deficitQty = 0;
+    let deficitValue = 0;
+
+    stocktakingItems.forEach(item => {
+      const diff = (item.actual_quantity || 0) - (item.system_quantity || 0);
+      const value = Math.abs(diff) * (item.cost_price || 0);
+      if (diff === 0) {
+        matched++;
+      } else if (diff > 0) {
+        surplus++;
+        surplusQty += diff;
+        surplusValue += value;
+      } else {
+        deficit++;
+        deficitQty += Math.abs(diff);
+        deficitValue += value;
+      }
+    });
+
+    return {
+      total: stocktakingItems.length,
+      matched,
+      surplus,
+      surplusQty,
+      surplusValue,
+      deficit,
+      deficitQty,
+      deficitValue
+    };
+  }, [stocktakingItems]);
+
+  // Gửi hoàn tất phiếu kiểm kê hàng loạt
+  const handleSubmitBulkStocktaking = async () => {
+    if (stocktakingItems.length === 0) {
+      messageApi.warning('Vui lòng thêm ít nhất 1 lô hàng vào phiếu kiểm kê!');
+      return;
+    }
+    setStocktakingSubmitting(true);
+    try {
+      const payload = {
+        reason: stocktakingReason || 'Kiểm kê kho định kỳ',
+        items: stocktakingItems.map(i => ({
+          batch_id: i.batch_id,
+          actual_quantity: i.actual_quantity,
+          notes: i.notes
+        }))
+      };
+      const res = await handleAPI('/api/stock-movements/bulk-adjust', payload, 'post');
+      messageApi.success(res?.message || 'Đã hoàn tất phiếu kiểm kê và cân bằng kho!');
+      setIsBulkStocktakingOpen(false);
+      setStocktakingItems([]);
+      fetchMovements();
+      fetchSummary();
+      fetchBatches();
+      fetchProducts();
+    } catch (error) {
+      console.error(error);
+      const msg = typeof error === 'string' ? error : error?.message || 'Có lỗi khi kiểm kê';
+      messageApi.error(msg);
+    } finally {
+      setStocktakingSubmitting(false);
+    }
+  };
+
+  // Xuất file Excel sổ kho & lịch sử biến động
+  const handleExportStockMovementsExcel = async () => {
+    setExportLoading(true);
+    try {
+      let url = `/api/stock-movements/export-excel?type=${filterType}&product_id=${filterProduct}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+
+      const filename = `So_Kho_Va_Bien_Dong_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
+      await downloadExcel(url, filename);
+      messageApi.success('Đã xuất file Excel Sổ kho thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel sổ kho:', error);
+      messageApi.error(error.message || 'Không thể xuất file Excel sổ kho. Vui lòng thử lại.');
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -334,7 +517,7 @@ export default function InventoryPage() {
           </Text>
         </div>
 
-        <Space size="middle">
+        <Space size="middle" wrap>
           <Button
             icon={<ReloadOutlined />}
             onClick={() => {
@@ -346,6 +529,42 @@ export default function InventoryPage() {
             Làm mới
           </Button>
 
+          {hasPermission(user, 'data_view') && (
+            <Button
+              icon={<FileExcelOutlined />}
+              onClick={handleExportStockMovementsExcel}
+              loading={exportLoading}
+              style={{
+                borderColor: '#10b981',
+                color: '#0d6e57',
+                fontWeight: 600
+              }}
+            >
+              Xuất Excel Sổ Kho
+            </Button>
+          )}
+
+          {hasPermission(user, 'data_edit') && (
+            <Button
+              type="primary"
+              icon={<DiffOutlined />}
+              onClick={() => {
+                setStocktakingItems([]);
+                setStocktakingReason('Kiểm kê kho định kỳ');
+                setIsBulkStocktakingOpen(true);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                borderColor: '#d97706',
+                color: '#ffffff',
+                fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(217, 119, 6, 0.25)'
+              }}
+            >
+              Tạo Phiếu Kiểm Kê Kho
+            </Button>
+          )}
+
           {hasPermission(user, 'data_edit') && (
             <Button
               icon={<DiffOutlined />}
@@ -356,7 +575,7 @@ export default function InventoryPage() {
               }}
               style={{ color: '#d97706', borderColor: '#fde68a' }}
             >
-              Kiểm Kê Kho
+              Kiểm Kê 1 Lô
             </Button>
           )}
 
@@ -728,6 +947,277 @@ export default function InventoryPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* DRAWER: TẠO PHIẾU KIỂM KÊ KHO HÀNG LOẠT */}
+      <Drawer
+        title={
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
+              Phiếu Kiểm Kê Kho & Điều Chỉnh Tồn Kho
+            </div>
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 400 }}>
+              Nhập số lượng thực tế kiểm đếm cho nhiều sản phẩm/lô hàng cùng lúc để tự động cân bằng kho hệ thống
+            </div>
+          </div>
+        }
+        open={isBulkStocktakingOpen}
+        onClose={() => setIsBulkStocktakingOpen(false)}
+        width={1050}
+        extra={
+          <Space>
+            <Button onClick={() => setIsBulkStocktakingOpen(false)}>Đóng</Button>
+            <Button
+              type="primary"
+              icon={<CheckOutlined />}
+              onClick={handleSubmitBulkStocktaking}
+              loading={stocktakingSubmitting}
+              style={{
+                background: 'linear-gradient(135deg, #0d6e57 0%, #10b981 100%)',
+                borderColor: '#0d6e57',
+                fontWeight: 600
+              }}
+            >
+              Cân Bằng Kho & Lưu Phiếu
+            </Button>
+          </Space>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Cấu hình đợt kiểm kê */}
+          <Card size="small" style={{ borderRadius: 8, background: '#f9fafb' }}>
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} md={10}>
+                <div style={{ fontWeight: 600, marginBottom: 4, color: '#374151' }}>
+                  Lý do / Đợt kiểm kê:
+                </div>
+                <Input
+                  value={stocktakingReason}
+                  onChange={(e) => setStocktakingReason(e.target.value)}
+                  placeholder="VD: Kiểm kê định kỳ cuối tháng, kiểm kê đột xuất..."
+                />
+              </Col>
+              <Col xs={24} md={14}>
+                <div style={{ fontWeight: 600, marginBottom: 4, color: '#374151' }}>
+                  Thêm lô hàng vào phiếu kiểm kê:
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Select
+                    showSearch
+                    placeholder="Chọn thêm từng lô hàng..."
+                    value={selectedBatchToAdd}
+                    onChange={(val) => handleAddBatchToStocktaking(val)}
+                    style={{ flex: 1 }}
+                    optionFilterProp="children"
+                    allowClear
+                  >
+                    {batches.map((b) => (
+                      <Select.Option key={b._id} value={b._id}>
+                        {b.product_id?.name || 'Sản phẩm'} — Lô: {b.batch_number} (Tồn: {b.quantity_in_stock}{' '}
+                        {b.product_id?.unit || 'Cái'})
+                      </Select.Option>
+                    ))}
+                  </Select>
+                  <Tooltip title="Tải tất cả các lô đang còn tồn kho vào bảng kiểm kê">
+                    <Button
+                      icon={<FileTextOutlined />}
+                      onClick={handleLoadAllBatchesToStocktaking}
+                      style={{ color: '#0d6e57', borderColor: '#a7f3d0', fontWeight: 600 }}
+                    >
+                      Tải tất cả
+                    </Button>
+                  </Tooltip>
+                  {stocktakingItems.length > 0 && (
+                    <Tooltip title="Xóa toàn bộ danh sách đang kiểm kê">
+                      <Button
+                        danger
+                        icon={<ClearOutlined />}
+                        onClick={() => setStocktakingItems([])}
+                      />
+                    </Tooltip>
+                  )}
+                </div>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* KPI TỔNG HỢP KIỂM KÊ REALTIME */}
+          <Row gutter={[12, 12]}>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 8, textAlign: 'center', borderLeft: '3px solid #3b82f6' }}>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Tổng mã kiểm kê</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e40af' }}>
+                  {stocktakingStats.total}
+                </div>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 8, textAlign: 'center', borderLeft: '3px solid #10b981' }}>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Khớp tồn kho</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#065f46' }}>
+                  {stocktakingStats.matched}
+                </div>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 8, textAlign: 'center', borderLeft: '3px solid #f59e0b' }}>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Thừa kho (+)</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#b45309' }}>
+                  {stocktakingStats.surplus} ({stocktakingStats.surplusQty > 0 ? `+${stocktakingStats.surplusQty}` : 0})
+                </div>
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{formatCurrency(stocktakingStats.surplusValue)}</div>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 8, textAlign: 'center', borderLeft: '3px solid #ef4444' }}>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Thiếu kho (-)</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#991b1b' }}>
+                  {stocktakingStats.deficit} ({stocktakingStats.deficitQty > 0 ? `-${stocktakingStats.deficitQty}` : 0})
+                </div>
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{formatCurrency(stocktakingStats.deficitValue)}</div>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* BẢNG SẢN PHẨM KIỂM KÊ */}
+          <Table
+            dataSource={stocktakingItems}
+            pagination={false}
+            size="middle"
+            locale={{
+              emptyText: (
+                <div style={{ padding: '32px 0', textAlign: 'center' }}>
+                  <InboxOutlined style={{ fontSize: 36, color: '#d1d5db', marginBottom: 8 }} />
+                  <div style={{ color: '#6b7280', fontSize: 14 }}>Chưa có sản phẩm nào trong phiếu kiểm kê</div>
+                  <div style={{ color: '#9ca3af', fontSize: 12, marginTop: 4 }}>
+                    Bấm <strong>"Tải tất cả"</strong> để kiểm kê toàn bộ kho hoặc chọn từng lô hàng ở trên
+                  </div>
+                </div>
+              )
+            }}
+            columns={[
+              {
+                title: 'STT',
+                key: 'idx',
+                width: 50,
+                align: 'center',
+                render: (_, __, idx) => idx + 1
+              },
+              {
+                title: 'Sản phẩm & SKU',
+                key: 'prod',
+                width: 200,
+                render: (_, record) => (
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#111827' }}>{record.product_name}</div>
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      {record.sku ? `SKU: ${record.sku} • ` : ''}ĐVT: {record.unit}
+                    </div>
+                  </div>
+                )
+              },
+              {
+                title: 'Lô & HSD',
+                key: 'batch',
+                width: 150,
+                render: (_, record) => (
+                  <div>
+                    <Tag color="cyan" style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                      {record.batch_number}
+                    </Tag>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                      HSD: {record.expiry_date ? dayjs(record.expiry_date).format('DD/MM/YYYY') : '---'}
+                    </div>
+                  </div>
+                )
+              },
+              {
+                title: 'Tồn hệ thống',
+                dataIndex: 'system_quantity',
+                key: 'sys_qty',
+                width: 110,
+                align: 'center',
+                render: (qty, record) => (
+                  <span style={{ fontWeight: 600, fontSize: 14, color: '#4b5563' }}>
+                    {qty} {record.unit}
+                  </span>
+                )
+              },
+              {
+                title: 'Thực tế đếm',
+                key: 'actual_qty',
+                width: 140,
+                render: (_, record) => (
+                  <InputNumber
+                    min={0}
+                    value={record.actual_quantity}
+                    onChange={(val) => handleUpdateActualQuantity(record.batch_id, val)}
+                    style={{ width: '100%', fontWeight: 700 }}
+                  />
+                )
+              },
+              {
+                title: 'Chênh lệch',
+                key: 'diff',
+                width: 120,
+                align: 'center',
+                render: (_, record) => {
+                  const diff = (record.actual_quantity || 0) - (record.system_quantity || 0);
+                  if (diff === 0) {
+                    return <Tag color="success">Khớp (0)</Tag>;
+                  }
+                  if (diff > 0) {
+                    return <Tag color="warning">+{diff} (Thừa)</Tag>;
+                  }
+                  return <Tag color="error">{diff} (Thiếu)</Tag>;
+                }
+              },
+              {
+                title: 'Giá trị lệch',
+                key: 'diff_val',
+                width: 120,
+                align: 'right',
+                render: (_, record) => {
+                  const diff = (record.actual_quantity || 0) - (record.system_quantity || 0);
+                  const val = Math.abs(diff) * (record.cost_price || 0);
+                  return (
+                    <span style={{ fontSize: 12, color: diff === 0 ? '#9ca3af' : diff > 0 ? '#d97706' : '#dc2626', fontWeight: diff !== 0 ? 600 : 400 }}>
+                      {diff === 0 ? '0 đ' : `${diff > 0 ? '+' : '-'}${formatCurrency(val)}`}
+                    </span>
+                  );
+                }
+              },
+              {
+                title: 'Ghi chú',
+                key: 'notes',
+                width: 160,
+                render: (_, record) => (
+                  <Input
+                    placeholder="Lý do lệch..."
+                    value={record.notes}
+                    onChange={(e) => handleUpdateItemNotes(record.batch_id, e.target.value)}
+                    size="small"
+                  />
+                )
+              },
+              {
+                title: '',
+                key: 'action',
+                width: 50,
+                align: 'center',
+                render: (_, record) => (
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleRemoveStocktakingItem(record.batch_id)}
+                    size="small"
+                  />
+                )
+              }
+            ]}
+          />
+        </div>
+      </Drawer>
     </DashboardLayout>
   );
 }

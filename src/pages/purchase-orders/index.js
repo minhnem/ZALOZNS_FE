@@ -22,7 +22,8 @@ import {
   Checkbox,
   Drawer,
   Descriptions,
-  Alert
+  Alert,
+  Upload
 } from 'antd';
 import {
   PlusOutlined,
@@ -37,11 +38,16 @@ import {
   CalendarOutlined,
   StopOutlined,
   DollarOutlined,
-  BarcodeOutlined
+  BarcodeOutlined,
+  UploadOutlined,
+  DownloadOutlined,
+  FileExcelOutlined
 } from '@ant-design/icons';
 import { FaWarehouse, FaTruck } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import handleAPI from '../../apis/handleAPI';
+import axiosClient from '../../apis/axiosClient';
+import { downloadExcel } from '../../utils/downloadExcel';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useSelector } from 'react-redux';
 import { hasPermission } from '../../utils/hasPermission';
@@ -76,6 +82,94 @@ export default function PurchaseOrdersPage() {
   const [orderItems, setOrderItems] = useState([]);
   const [discountVal, setDiscountVal] = useState(0);
   const [taxVal, setTaxVal] = useState(0);
+
+  // States cho tính năng Nhập Excel
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [parseExcelLoading, setParseExcelLoading] = useState(false);
+  const [importSupplierId, setImportSupplierId] = useState(null);
+  const [importAutoReceive, setImportAutoReceive] = useState(true);
+  const [importNotes, setImportNotes] = useState('');
+
+  // Tải file mẫu nhập kho
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadExcel('/api/purchase-orders/template', 'Mau_Nhap_Kho.xlsx');
+      messageApi.success('Đã tải xuống file mẫu nhập kho thành công!');
+    } catch (error) {
+      console.error(error);
+      messageApi.error(error.message || 'Không thể tải file mẫu nhập kho');
+    }
+  };
+
+  // Nạp hàng từ Excel vào form tạo phiếu đang mở
+  const handleParseExcelToForm = async (file) => {
+    setParseExcelLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axiosClient.post('/api/purchase-orders/parse-items', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res?.data?.items && res.data.items.length > 0) {
+        const formattedItems = res.data.items.map((it) => ({
+          product_id: it.product_id,
+          batch_number: it.batch_number,
+          manufacturing_date: it.manufacturing_date ? dayjs(it.manufacturing_date) : null,
+          expiry_date: it.expiry_date ? dayjs(it.expiry_date) : null,
+          quantity: it.quantity,
+          cost_price: it.cost_price,
+          total_price: it.total_price
+        }));
+
+        form.setFieldsValue({ items: formattedItems });
+        setOrderItems(formattedItems);
+        messageApi.success(res.data.message || `Đã nạp ${formattedItems.length} mặt hàng từ Excel vào phiếu!`);
+        fetchProducts();
+      } else {
+        messageApi.warning('Không tìm thấy danh sách mặt hàng hợp lệ trong file Excel');
+      }
+    } catch (err) {
+      console.error(err);
+      messageApi.error(err?.response?.data?.message || 'Lỗi khi đọc file Excel');
+    } finally {
+      setParseExcelLoading(false);
+    }
+    return false;
+  };
+
+  // Tạo trực tiếp phiếu nhập kho từ file Excel
+  const handleCustomDirectImport = async (file) => {
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (importSupplierId) {
+        formData.append('supplier_id', importSupplierId);
+      }
+      formData.append('auto_receive', importAutoReceive ? 'true' : 'false');
+      if (importNotes) {
+        formData.append('notes', importNotes);
+      }
+
+      const res = await axiosClient.post('/api/purchase-orders/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      messageApi.success(res.data?.message || 'Đã tạo phiếu nhập kho từ Excel thành công!');
+      setIsImportModalVisible(false);
+      setImportNotes('');
+      fetchOrders();
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      messageApi.error(err?.response?.data?.message || 'Lỗi khi nhập file Excel phiếu nhập kho');
+    } finally {
+      setImportLoading(false);
+    }
+    return false;
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -615,20 +709,38 @@ export default function PurchaseOrdersPage() {
         </div>
 
         {hasPermission(user, 'data_create') && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            style={{
-              background: 'linear-gradient(135deg, #0d6e57 0%, #10b981 100%)',
-              border: 'none',
-              fontWeight: 600,
-              boxShadow: '0 4px 12px rgba(13, 110, 87, 0.25)'
-            }}
-            onClick={handleOpenCreateModal}
-          >
-            Tạo Phiếu Nhập Kho
-          </Button>
+          <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTemplate}
+            >
+              Tải File Mẫu
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setIsImportModalVisible(true)}
+              style={{
+                borderColor: '#10b981',
+                color: '#10b981'
+              }}
+            >
+              Nhập Excel
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              size="large"
+              style={{
+                background: 'linear-gradient(135deg, #0d6e57 0%, #10b981 100%)',
+                border: 'none',
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(13, 110, 87, 0.25)'
+              }}
+              onClick={handleOpenCreateModal}
+            >
+              Tạo Phiếu Nhập Kho
+            </Button>
+          </Space>
         )}
       </div>
 
@@ -877,9 +989,45 @@ export default function PurchaseOrdersPage() {
             </Col>
           </Row>
 
-          <Divider orientation="left" style={{ margin: '8px 0 16px 0', fontSize: 14 }}>
-            Danh Sách Hàng Nhập Kho
-          </Divider>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              margin: '12px 0 16px 0',
+              paddingBottom: 8,
+              borderBottom: '1px solid #e5e7eb',
+              flexWrap: 'wrap',
+              gap: 8
+            }}
+          >
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>
+              Danh Sách Hàng Nhập Kho
+            </span>
+            <Space>
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadTemplate}
+              >
+                File mẫu Excel
+              </Button>
+              <Upload
+                beforeUpload={handleParseExcelToForm}
+                showUploadList={false}
+                accept=".xlsx, .xls"
+              >
+                <Button
+                  size="small"
+                  icon={<FileExcelOutlined />}
+                  loading={parseExcelLoading}
+                  style={{ color: '#0d6e57', borderColor: '#0d6e57' }}
+                >
+                  Nhập từ file Excel
+                </Button>
+              </Upload>
+            </Space>
+          </div>
 
           {/* DYNAMIC ITEMS FORM LIST */}
           <Form.List name="items">
@@ -1234,6 +1382,133 @@ export default function PurchaseOrdersPage() {
           </div>
         )}
       </Drawer>
+
+      {/* MODAL NHẬP KHO TỰ ĐỘNG TỪ FILE EXCEL */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileExcelOutlined style={{ color: '#10b981', fontSize: 20 }} />
+            <span>Nhập Kho Tự Động Từ File Excel</span>
+          </div>
+        }
+        open={isImportModalVisible}
+        onCancel={() => setIsImportModalVisible(false)}
+        footer={null}
+        width={640}
+        destroyOnClose
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Alert
+            type="info"
+            showIcon
+            message="Hướng dẫn nhập kho bằng Excel"
+            description={
+              <div>
+                <p style={{ margin: 0 }}>
+                  1. Tải file mẫu chuẩn để điền thông tin (Tên SP, SKU, Số lô, Ngày SX, Hạn dùng, Số lượng, Giá nhập).
+                </p>
+                <p style={{ margin: 0 }}>
+                  2. Hệ thống sẽ tự động đối soát SKU hoặc Tên sản phẩm, tạo Lô hàng chuẩn FEFO và tăng tồn kho ngay nếu bật &quot;Nhập kho &amp; cộng tồn kho ngay&quot;.
+                </p>
+              </div>
+            }
+          />
+
+          <Row gutter={16}>
+            <Col span={14}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>Nhà cung cấp:</div>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Chọn nhà cung cấp (hoặc mặc định)"
+                value={importSupplierId}
+                onChange={setImportSupplierId}
+                allowClear
+                showSearch
+                optionFilterProp="children"
+              >
+                {suppliers.map((s) => (
+                  <Select.Option key={s._id} value={s._id}>
+                    {s.name} ({s.code || 'NCC'})
+                  </Select.Option>
+                ))}
+              </Select>
+            </Col>
+            <Col span={10}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>Hình thức nhận hàng:</div>
+              <div style={{ paddingTop: 4 }}>
+                <Checkbox
+                  checked={importAutoReceive}
+                  onChange={(e) => setImportAutoReceive(e.target.checked)}
+                >
+                  Nhập kho &amp; cộng tồn kho ngay
+                </Checkbox>
+              </div>
+            </Col>
+          </Row>
+
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Ghi chú phiếu nhập:</div>
+            <Input
+              placeholder="VD: Nhập hàng lô khuyến mãi đợt 1 / Đơn nhập từ KiotViet..."
+              value={importNotes}
+              onChange={(e) => setImportNotes(e.target.value)}
+            />
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc',
+              padding: '12px 16px',
+              borderRadius: 8,
+              border: '1px dashed #cbd5e1'
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, color: '#1e293b' }}>Chưa có file mẫu chuẩn?</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>
+                Tải file Excel mẫu với các cột được định dạng sẵn
+              </div>
+            </div>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTemplate}
+              style={{ borderColor: '#0d6e57', color: '#0d6e57' }}
+            >
+              Tải File Mẫu
+            </Button>
+          </div>
+
+          <Upload.Dragger
+            name="file"
+            accept=".xlsx, .xls"
+            beforeUpload={handleCustomDirectImport}
+            showUploadList={false}
+            disabled={importLoading}
+            style={{
+              padding: '24px 0',
+              background: '#fafafa',
+              border: '2px dashed #0d6e57'
+            }}
+          >
+            <p className="ant-upload-drag-icon" style={{ marginBottom: 8 }}>
+              {importLoading ? (
+                <ClockCircleOutlined style={{ fontSize: 40, color: '#0d6e57' }} spin />
+              ) : (
+                <InboxOutlined style={{ fontSize: 40, color: '#0d6e57' }} />
+              )}
+            </p>
+            <p className="ant-upload-text" style={{ fontSize: 15, fontWeight: 600, color: '#1f2937' }}>
+              {importLoading ? 'Đang xử lý tạo phiếu nhập kho...' : 'Nhấp hoặc kéo thả file Excel vào đây'}
+            </p>
+            <p className="ant-upload-hint" style={{ color: '#6b7280', fontSize: 13 }}>
+              Hỗ trợ định dạng .xlsx, .xls. Dữ liệu sẽ được tự động chuẩn hoá và lưu vào hệ thống.
+            </p>
+          </Upload.Dragger>
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 }
